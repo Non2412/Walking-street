@@ -12,10 +12,13 @@ export default function HomePage() {
 
   return (
     <div style={styles.container}>
+      {/* Dark Overlay */}
+      <div style={styles.overlay}></div>
+
       {/* Logo - ครอบด้วย div เพื่อซ่อนกรอบสีขาว */}
       <div style={styles.logoWrapper}>
         <img
-          src="/img/walking.png"
+          src="/img/walking-transparent.png?v=2"
           alt="ตลาดถนนคนเดินศรีสะเกษ"
           style={styles.logo}
         />
@@ -43,32 +46,49 @@ export default function HomePage() {
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     minHeight: '100vh',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#1a1a1a',
+    backgroundImage: 'url(/img/market-bg.png)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '48px',
     padding: '20px',
+    position: 'relative',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1,
   },
   logoWrapper: {
     width: '400px',
     maxWidth: '90vw',
-    height: '280px',
-    overflow: 'hidden',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     animation: 'float 3s ease-in-out infinite',
+    position: 'relative',
+    zIndex: 2,
+    background: 'rgba(255, 255, 255, 0.15)',
+    padding: '20px',
+    borderRadius: '20px',
+    border: 'none',
+    backdropFilter: 'blur(10px)',
   },
   logo: {
-    width: '500px',
+    width: '100%',
     height: 'auto',
     objectFit: 'contain',
-    marginTop: '-60px',
-    marginBottom: '-60px',
-    marginLeft: '-50px',
-    marginRight: '-50px',
+    filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4)) contrast(1.2) brightness(1.1)',
+    mixBlendMode: 'multiply',
   },
   loginButton: {
     padding: '16px 48px',
@@ -81,6 +101,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
     transition: 'all 0.3s ease',
+    position: 'relative',
+    zIndex: 2,
   },
 };
 
