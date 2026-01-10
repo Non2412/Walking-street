@@ -1,66 +1,104 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+/**
+ * Home Page - หน้าแรก
+ * เข้าดูที่: http://localhost:3000
+ */
 
-export default function Home() {
+'use client';
+
+import { useRouter } from 'next/navigation';
+
+export default function HomePage() {
+  const router = useRouter();
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div style={styles.container}>
+      {/* Logo - ครอบด้วย div เพื่อซ่อนกรอบสีขาว */}
+      <div style={styles.logoWrapper}>
+        <img
+          src="/img/walking.png"
+          alt="ตลาดถนนคนเดินศรีสะเกษ"
+          style={styles.logo}
         />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
+
+      {/* Login Button */}
+      <button
+        onClick={() => router.push('/login')}
+        style={styles.loginButton}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-4px)';
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.4)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.3)';
+        }}
+      >
+        เข้าสู่ระบบ
+      </button>
     </div>
   );
+}
+
+const styles: { [key: string]: React.CSSProperties } = {
+  container: {
+    minHeight: '100vh',
+    backgroundColor: '#ffffff',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '48px',
+    padding: '20px',
+  },
+  logoWrapper: {
+    width: '400px',
+    maxWidth: '90vw',
+    height: '280px',
+    overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    animation: 'float 3s ease-in-out infinite',
+  },
+  logo: {
+    width: '500px',
+    height: 'auto',
+    objectFit: 'contain',
+    marginTop: '-60px',
+    marginBottom: '-60px',
+    marginLeft: '-50px',
+    marginRight: '-50px',
+  },
+  loginButton: {
+    padding: '16px 48px',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: '#ffffff',
+    backgroundColor: '#667eea',
+    border: 'none',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+    transition: 'all 0.3s ease',
+  },
+};
+
+// เพิ่ม keyframe animation
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = `
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+    `;
+  if (!document.querySelector('style[data-float-animation]')) {
+    styleSheet.setAttribute('data-float-animation', 'true');
+    document.head.appendChild(styleSheet);
+  }
 }
