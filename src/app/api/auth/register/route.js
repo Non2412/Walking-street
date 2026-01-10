@@ -1,6 +1,10 @@
+/**
+ * Register API Route
+ * POST /api/auth/register
+ */
+
 import { NextResponse } from 'next/server';
 
-// TODO: เชื่อมกับ database จริง
 // ตอนนี้เก็บใน memory (จะหายเมื่อ restart server)
 let USERS = [
     {
@@ -14,10 +18,10 @@ let USERS = [
 
 export async function POST(request) {
     try {
-        const { name, email, password, confirmPassword } = await request.json();
+        const { name, shopName, shopDescription, phone, email, password, confirmPassword } = await request.json();
 
         // Validation
-        if (!name || !email || !password || !confirmPassword) {
+        if (!name || !shopName || !shopDescription || !phone || !email || !password || !confirmPassword) {
             return NextResponse.json(
                 { success: false, error: 'กรุณากรอกข้อมูลให้ครบถ้วน' },
                 { status: 400 }
@@ -53,6 +57,9 @@ export async function POST(request) {
             email,
             password, // TODO: hash ด้วย bcrypt ในระบบจริง
             name,
+            shopName,
+            shopDescription,
+            phone,
             role: 'user',
             createdAt: new Date().toISOString(),
         };

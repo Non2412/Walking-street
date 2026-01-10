@@ -56,12 +56,17 @@ export default function ForgotPasswordPage() {
 
     return (
         <div style={styles.container}>
-            <div style={styles.bgDecoration1}></div>
-            <div style={styles.bgDecoration2}></div>
+            {/* Background Image */}
+            <div style={styles.backgroundImage}></div>
+            <div style={styles.overlay}></div>
 
             <div style={styles.card}>
                 <div style={styles.header}>
-                    <div style={styles.logo}>🔑</div>
+                    <img
+                        src="/img/walking.png"
+                        alt="Logo"
+                        style={styles.logoImage}
+                    />
                     <h1 style={styles.title}>ลืมรหัสผ่าน?</h1>
                     <p style={styles.subtitle}>
                         กรอกอีเมลของคุณ เราจะส่งลิงก์สำหรับรีเซ็ตรหัสผ่านให้
@@ -148,30 +153,32 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
         padding: '20px',
         position: 'relative',
         overflow: 'hidden',
     },
-    bgDecoration1: {
+    backgroundImage: {
         position: 'absolute',
-        top: '-100px',
-        right: '-100px',
-        width: '400px',
-        height: '400px',
-        background: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '50%',
-        filter: 'blur(60px)',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundImage: 'url(/img/walking.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        filter: 'blur(8px)',
+        transform: 'scale(1.1)',
+        zIndex: 0,
     },
-    bgDecoration2: {
+    overlay: {
         position: 'absolute',
-        bottom: '-150px',
-        left: '-150px',
-        width: '500px',
-        height: '500px',
-        background: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '50%',
-        filter: 'blur(80px)',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: 1,
     },
     card: {
         backgroundColor: '#fff',
@@ -181,16 +188,18 @@ const styles = {
         width: '100%',
         maxWidth: '480px',
         position: 'relative',
-        zIndex: 1,
+        zIndex: 2,
     },
     header: {
         textAlign: 'center',
         marginBottom: '32px',
     },
-    logo: {
-        fontSize: '64px',
-        marginBottom: '16px',
-        animation: 'bounce 2s infinite',
+    logoImage: {
+        width: '280px',
+        height: 'auto',
+        maxWidth: '100%',
+        objectFit: 'contain',
+        marginBottom: '24px',
     },
     title: {
         fontSize: '28px',

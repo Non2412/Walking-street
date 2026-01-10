@@ -14,6 +14,9 @@ export default function RegisterPage() {
     const { register } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
+        shopName: '',
+        shopDescription: '',
+        phone: '',
         email: '',
         password: '',
         confirmPassword: '',
@@ -42,6 +45,20 @@ export default function RegisterPage() {
 
         if (!formData.name.trim()) {
             newErrors.name = 'กรุณากรอกชื่อ';
+        }
+
+        if (!formData.shopName.trim()) {
+            newErrors.shopName = 'กรุณากรอกชื่อร้าน';
+        }
+
+        if (!formData.shopDescription.trim()) {
+            newErrors.shopDescription = 'กรุณากรอกรายละเอียดร้าน';
+        }
+
+        if (!formData.phone.trim()) {
+            newErrors.phone = 'กรุณากรอกเบอร์โทรศัพท์';
+        } else if (!/^[0-9]{10}$/.test(formData.phone.replace(/-/g, ''))) {
+            newErrors.phone = 'เบอร์โทรศัพท์ไม่ถูกต้อง (10 หลัก)';
         }
 
         if (!formData.email) {
@@ -96,12 +113,17 @@ export default function RegisterPage() {
 
     return (
         <div style={styles.container}>
-            <div style={styles.bgDecoration1}></div>
-            <div style={styles.bgDecoration2}></div>
+            {/* Background Image */}
+            <div style={styles.backgroundImage}></div>
+            <div style={styles.overlay}></div>
 
             <div style={styles.card}>
                 <div style={styles.header}>
-                    <div style={styles.logo}>📝</div>
+                    <img
+                        src="/img/walking.png"
+                        alt="Logo"
+                        style={styles.logoImage}
+                    />
                     <h1 style={styles.title}>สมัครสมาชิก</h1>
                     <p style={styles.subtitle}>สร้างบัญชีใหม่เพื่อเข้าใช้งานระบบ</p>
                 </div>
@@ -114,24 +136,86 @@ export default function RegisterPage() {
                 )}
 
                 <form onSubmit={handleSubmit} style={styles.form}>
-                    {/* Name Field */}
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>
-                            <span style={styles.labelIcon}>👤</span>
-                            ชื่อ-นามสกุล
-                        </label>
-                        <input
-                            type="text"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                            placeholder="นายสมชาย ใจดี"
-                            style={errors.name ? { ...styles.input, ...styles.inputError } : styles.input}
-                            disabled={isLoading}
-                        />
-                        {errors.name && (
-                            <span style={styles.errorText}>{errors.name}</span>
-                        )}
+                    {/* Row 1: Name and Shop Name */}
+                    <div style={styles.formRow}>
+                        <div style={styles.formGroup}>
+                            <label style={styles.label}>
+                                <span style={styles.labelIcon}>👤</span>
+                                ชื่อ-นามสกุล
+                            </label>
+                            <input
+                                type="text"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                placeholder="นายสมชาย ใจดี"
+                                style={errors.name ? { ...styles.input, ...styles.inputError } : styles.input}
+                                disabled={isLoading}
+                            />
+                            {errors.name && (
+                                <span style={styles.errorText}>{errors.name}</span>
+                            )}
+                        </div>
+
+                        <div style={styles.formGroup}>
+                            <label style={styles.label}>
+                                <span style={styles.labelIcon}>🏪</span>
+                                ชื่อร้าน
+                            </label>
+                            <input
+                                type="text"
+                                name="shopName"
+                                value={formData.shopName}
+                                onChange={handleChange}
+                                placeholder="ร้านขายของชำ"
+                                style={errors.shopName ? { ...styles.input, ...styles.inputError } : styles.input}
+                                disabled={isLoading}
+                            />
+                            {errors.shopName && (
+                                <span style={styles.errorText}>{errors.shopName}</span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Row 2: Shop Description and Phone */}
+                    <div style={styles.formRow}>
+                        <div style={styles.formGroup}>
+                            <label style={styles.label}>
+                                <span style={styles.labelIcon}>📝</span>
+                                รายละเอียดร้าน
+                            </label>
+                            <input
+                                type="text"
+                                name="shopDescription"
+                                value={formData.shopDescription}
+                                onChange={handleChange}
+                                placeholder="ขายอาหารและเครื่องดื่ม"
+                                style={errors.shopDescription ? { ...styles.input, ...styles.inputError } : styles.input}
+                                disabled={isLoading}
+                            />
+                            {errors.shopDescription && (
+                                <span style={styles.errorText}>{errors.shopDescription}</span>
+                            )}
+                        </div>
+
+                        <div style={styles.formGroup}>
+                            <label style={styles.label}>
+                                <span style={styles.labelIcon}>📞</span>
+                                เบอร์โทรศัพท์
+                            </label>
+                            <input
+                                type="tel"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                placeholder="0812345678"
+                                style={errors.phone ? { ...styles.input, ...styles.inputError } : styles.input}
+                                disabled={isLoading}
+                            />
+                            {errors.phone && (
+                                <span style={styles.errorText}>{errors.phone}</span>
+                            )}
+                        </div>
                     </div>
 
                     {/* Email Field */}
@@ -267,30 +351,32 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
         padding: '20px',
         position: 'relative',
         overflow: 'hidden',
     },
-    bgDecoration1: {
+    backgroundImage: {
         position: 'absolute',
-        top: '-100px',
-        right: '-100px',
-        width: '400px',
-        height: '400px',
-        background: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '50%',
-        filter: 'blur(60px)',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundImage: 'url(/img/walking.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        filter: 'blur(8px)',
+        transform: 'scale(1.1)',
+        zIndex: 0,
     },
-    bgDecoration2: {
+    overlay: {
         position: 'absolute',
-        bottom: '-150px',
-        left: '-150px',
-        width: '500px',
-        height: '500px',
-        background: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '50%',
-        filter: 'blur(80px)',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: 1,
     },
     card: {
         backgroundColor: '#fff',
@@ -298,18 +384,20 @@ const styles = {
         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
         padding: '48px',
         width: '100%',
-        maxWidth: '480px',
+        maxWidth: '720px',
         position: 'relative',
-        zIndex: 1,
+        zIndex: 2,
     },
     header: {
         textAlign: 'center',
         marginBottom: '32px',
     },
-    logo: {
-        fontSize: '64px',
-        marginBottom: '16px',
-        animation: 'bounce 2s infinite',
+    logoImage: {
+        width: '280px',
+        height: 'auto',
+        maxWidth: '100%',
+        objectFit: 'contain',
+        marginBottom: '24px',
     },
     title: {
         fontSize: '28px',
@@ -339,8 +427,14 @@ const styles = {
     form: {
         marginBottom: '24px',
     },
+    formRow: {
+        display: 'flex',
+        gap: '16px',
+        marginBottom: '0px',
+    },
     formGroup: {
-        marginBottom: '20px',
+        marginBottom: '16px',
+        flex: 1,
     },
     label: {
         display: 'flex',
