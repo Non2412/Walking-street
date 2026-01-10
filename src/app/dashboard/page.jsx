@@ -6,103 +6,115 @@
 'use client';
 
 import ProtectedRoute from '@/components/ProtectedRoute';
+import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
 function DashboardContent() {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const router = useRouter();
 
-    const handleLogout = () => {
-        logout();
-    };
+    // Mock data
+    const stats = [
+        { id: 1, title: 'การจองทั้งหมด', value: '24', icon: '📋', color: '#3498db' },
+        { id: 2, title: 'รออนุมัติ', value: '8', icon: '⏳', color: '#f39c12' },
+        { id: 3, title: 'อนุมัติแล้ว', value: '14', icon: '✅', color: '#27ae60' },
+        { id: 4, title: 'ปฏิเสธ', value: '2', icon: '❌', color: '#e74c3c' },
+    ];
+
+    const quickActions = [
+        { id: 1, title: 'สร้างการจอง', icon: '➕', color: '#667eea', path: '/bookings/create' },
+        { id: 2, title: 'ดูการจอง', icon: '📋', color: '#3498db', path: '/bookings' },
+        { id: 3, title: 'คลังสินค้า', icon: '📦', color: '#9b59b6', path: '/inventory' },
+        { id: 4, title: 'รายงาน', icon: '📊', color: '#e67e22', path: '/reports' },
+    ];
+
+    const recentActivities = [
+        { id: 1, action: 'สร้างการจองใหม่', time: '5 นาทีที่แล้ว', icon: '➕', color: '#27ae60' },
+        { id: 2, action: 'อนุมัติการจอง #1234', time: '1 ชั่วโมงที่แล้ว', icon: '✅', color: '#3498db' },
+        { id: 3, action: 'แก้ไขข้อมูลร้าน', time: '2 ชั่วโมงที่แล้ว', icon: '✏️', color: '#f39c12' },
+        { id: 4, action: 'ดูรายงานประจำเดือน', time: '3 ชั่วโมงที่แล้ว', icon: '📊', color: '#9b59b6' },
+    ];
 
     return (
-        <div style={styles.container}>
-            {/* Header */}
-            <div style={styles.header}>
-                <div>
-                    <h1 style={styles.title}>🏪 Dashboard</h1>
-                    <p style={styles.subtitle}>ยินดีต้อนรับ, {user?.name}!</p>
+        <div style={styles.pageContainer}>
+            <Navbar />
+
+            <div style={styles.container}>
+                {/* Welcome Section */}
+                <div style={styles.welcomeSection}>
+                    <div>
+                        <h1 style={styles.welcomeTitle}>
+                            สวัสดี, {user?.name}! 👋
+                        </h1>
+                        <p style={styles.welcomeSubtitle}>
+                            ยินดีต้อนรับสู่ระบบจัดการตลาดถนนคนเดินศรีสะเกษ
+                        </p>
+                    </div>
+                    <div style={styles.dateSection}>
+                        <span style={styles.dateText}>
+                            📅 {new Date().toLocaleDateString('th-TH', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            })}
+                        </span>
+                    </div>
                 </div>
-                <button onClick={handleLogout} style={styles.logoutButton}>
-                    🚪 ออกจากระบบ
-                </button>
-            </div>
 
-            {/* User Info Card */}
-            <div style={styles.card}>
-                <h2 style={styles.cardTitle}>ข้อมูลผู้ใช้</h2>
-                <div style={styles.infoGrid}>
-                    <div style={styles.infoItem}>
-                        <span style={styles.infoLabel}>ชื่อ:</span>
-                        <span style={styles.infoValue}>{user?.name}</span>
+                {/* Stats Grid */}
+                <div style={styles.statsGrid}>
+                    {stats.map((stat) => (
+                        <div key={stat.id} style={styles.statCard}>
+                            <div style={styles.statHeader}>
+                                <span style={{ ...styles.statIcon, backgroundColor: stat.color + '20' }}>
+                                    {stat.icon}
+                                </span>
+                                <h3 style={styles.statTitle}>{stat.title}</h3>
+                            </div>
+                            <p style={{ ...styles.statValue, color: stat.color }}>{stat.value}</p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Quick Actions */}
+                <div style={styles.section}>
+                    <h2 style={styles.sectionTitle}>เมนูด่วน</h2>
+                    <div style={styles.actionsGrid}>
+                        {quickActions.map((action) => (
+                            <button
+                                key={action.id}
+                                onClick={() => router.push(action.path)}
+                                style={{ ...styles.actionCard, borderTop: `4px solid ${action.color}` }}
+                            >
+                                <div style={{ ...styles.actionIcon, color: action.color }}>
+                                    {action.icon}
+                                </div>
+                                <span style={styles.actionTitle}>{action.title}</span>
+                            </button>
+                        ))}
                     </div>
-                    <div style={styles.infoItem}>
-                        <span style={styles.infoLabel}>อีเมล:</span>
-                        <span style={styles.infoValue}>{user?.email}</span>
-                    </div>
-                    <div style={styles.infoItem}>
-                        <span style={styles.infoLabel}>บทบาท:</span>
-                        <span style={styles.badge}>{user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน'}</span>
+                </div>
+
+                {/* Recent Activities */}
+                <div style={styles.section}>
+                    <h2 style={styles.sectionTitle}>กิจกรรมล่าสุด</h2>
+                    <div style={styles.activitiesCard}>
+                        {recentActivities.map((activity) => (
+                            <div key={activity.id} style={styles.activityItem}>
+                                <div style={{ ...styles.activityIcon, backgroundColor: activity.color + '20', color: activity.color }}>
+                                    {activity.icon}
+                                </div>
+                                <div style={styles.activityContent}>
+                                    <span style={styles.activityAction}>{activity.action}</span>
+                                    <span style={styles.activityTime}>{activity.time}</span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
-
-            {/* Quick Actions */}
-            <div style={styles.actionsGrid}>
-                <ActionCard
-                    icon="📋"
-                    title="รายการจอง"
-                    description="ดูและจัดการการจองทั้งหมด"
-                    onClick={() => router.push('/bookings')}
-                />
-                <ActionCard
-                    icon="➕"
-                    title="สร้างการจอง"
-                    description="เพิ่มการจองใหม่"
-                    onClick={() => router.push('/bookings/create')}
-                />
-                <ActionCard
-                    icon="👤"
-                    title="โปรไฟล์"
-                    description="แก้ไขข้อมูลส่วนตัว"
-                    onClick={() => router.push('/profile')}
-                />
-                <ActionCard
-                    icon="⚙️"
-                    title="ตั้งค่า"
-                    description="ตั้งค่าระบบ"
-                    onClick={() => router.push('/settings')}
-                />
-            </div>
-
-            {/* Stats */}
-            <div style={styles.statsGrid}>
-                <StatCard title="การจองทั้งหมด" value="24" color="#3498db" />
-                <StatCard title="รออนุมัติ" value="8" color="#f39c12" />
-                <StatCard title="อนุมัติแล้ว" value="14" color="#27ae60" />
-                <StatCard title="ปฏิเสธ" value="2" color="#e74c3c" />
-            </div>
-        </div>
-    );
-}
-
-function ActionCard({ icon, title, description, onClick }) {
-    return (
-        <div style={styles.actionCard} onClick={onClick}>
-            <div style={styles.actionIcon}>{icon}</div>
-            <h3 style={styles.actionTitle}>{title}</h3>
-            <p style={styles.actionDescription}>{description}</p>
-        </div>
-    );
-}
-
-function StatCard({ title, value, color }) {
-    return (
-        <div style={{ ...styles.statCard, borderLeftColor: color }}>
-            <h4 style={styles.statTitle}>{title}</h4>
-            <p style={{ ...styles.statValue, color }}>{value}</p>
         </div>
     );
 }
@@ -116,89 +128,99 @@ export default function DashboardPage() {
 }
 
 const styles = {
-    container: {
+    pageContainer: {
         minHeight: '100vh',
         backgroundColor: '#f5f7fa',
-        padding: '40px 20px',
     },
-    header: {
-        maxWidth: '1200px',
-        margin: '0 auto 40px',
+    container: {
+        maxWidth: '1400px',
+        margin: '0 auto',
+        padding: '40px 24px',
+    },
+    welcomeSection: {
+        backgroundColor: '#fff',
+        borderRadius: '16px',
+        padding: '32px',
+        marginBottom: '32px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#fff',
-        padding: '24px',
-        borderRadius: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        flexWrap: 'wrap',
+        gap: '16px',
     },
-    title: {
-        margin: '0 0 8px 0',
+    welcomeTitle: {
         fontSize: '32px',
         fontWeight: 'bold',
         color: '#2c3e50',
+        margin: '0 0 8px 0',
     },
-    subtitle: {
-        margin: 0,
+    welcomeSubtitle: {
         fontSize: '16px',
         color: '#7f8c8d',
+        margin: 0,
     },
-    logoutButton: {
-        padding: '12px 24px',
-        backgroundColor: '#e74c3c',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        transition: 'all 0.3s',
-    },
-    card: {
-        maxWidth: '1200px',
-        margin: '0 auto 40px',
-        backgroundColor: '#fff',
-        padding: '24px',
+    dateSection: {
+        padding: '12px 20px',
+        backgroundColor: '#f8f9fa',
         borderRadius: '12px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
     },
-    cardTitle: {
-        margin: '0 0 20px 0',
-        fontSize: '20px',
-        fontWeight: 'bold',
-        color: '#2c3e50',
+    dateText: {
+        fontSize: '14px',
+        color: '#666',
+        fontWeight: '600',
     },
-    infoGrid: {
+    statsGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-        gap: '16px',
+        gap: '24px',
+        marginBottom: '40px',
     },
-    infoItem: {
+    statCard: {
+        backgroundColor: '#fff',
+        borderRadius: '16px',
+        padding: '24px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        transition: 'all 0.3s',
+    },
+    statHeader: {
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
+        marginBottom: '16px',
     },
-    infoLabel: {
-        fontWeight: 'bold',
-        color: '#7f8c8d',
-        minWidth: '80px',
-    },
-    infoValue: {
-        color: '#2c3e50',
-    },
-    badge: {
-        padding: '4px 12px',
-        backgroundColor: '#3498db',
-        color: '#fff',
+    statIcon: {
+        fontSize: '32px',
+        width: '56px',
+        height: '56px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         borderRadius: '12px',
+    },
+    statTitle: {
         fontSize: '14px',
+        color: '#7f8c8d',
+        margin: 0,
+        fontWeight: '600',
+    },
+    statValue: {
+        fontSize: '36px',
         fontWeight: 'bold',
+        margin: 0,
+    },
+    section: {
+        marginBottom: '40px',
+    },
+    sectionTitle: {
+        fontSize: '24px',
+        fontWeight: 'bold',
+        color: '#2c3e50',
+        marginBottom: '20px',
     },
     actionsGrid: {
-        maxWidth: '1200px',
-        margin: '0 auto 40px',
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: '20px',
     },
     actionCard: {
@@ -209,45 +231,55 @@ const styles = {
         cursor: 'pointer',
         transition: 'all 0.3s',
         textAlign: 'center',
+        border: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '12px',
     },
     actionIcon: {
         fontSize: '48px',
-        marginBottom: '12px',
     },
     actionTitle: {
-        margin: '0 0 8px 0',
-        fontSize: '18px',
+        fontSize: '16px',
         fontWeight: 'bold',
         color: '#2c3e50',
     },
-    actionDescription: {
-        margin: 0,
-        fontSize: '14px',
-        color: '#7f8c8d',
-    },
-    statsGrid: {
-        maxWidth: '1200px',
-        margin: '0 auto',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-        gap: '20px',
-    },
-    statCard: {
+    activitiesCard: {
         backgroundColor: '#fff',
-        padding: '20px',
-        borderRadius: '12px',
+        borderRadius: '16px',
+        padding: '24px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        borderLeft: '4px solid',
     },
-    statTitle: {
-        margin: '0 0 12px 0',
+    activityItem: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        padding: '16px 0',
+        borderBottom: '1px solid #f0f0f0',
+    },
+    activityIcon: {
+        fontSize: '24px',
+        width: '48px',
+        height: '48px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '12px',
+    },
+    activityContent: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+    },
+    activityAction: {
         fontSize: '14px',
-        color: '#7f8c8d',
         fontWeight: '600',
+        color: '#2c3e50',
     },
-    statValue: {
-        margin: 0,
-        fontSize: '32px',
-        fontWeight: 'bold',
+    activityTime: {
+        fontSize: '12px',
+        color: '#7f8c8d',
     },
 };
