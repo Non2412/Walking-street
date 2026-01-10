@@ -1,8 +1,3 @@
-/**
- * Register API Route
- * POST /api/auth/register
- */
-
 import { NextResponse } from 'next/server';
 
 // TODO: เชื่อมกับ database จริง
