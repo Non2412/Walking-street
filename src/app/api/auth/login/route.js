@@ -1,24 +1,10 @@
+/**
+ * Login API Route - Using Shared Database
+ * POST /api/auth/login
+ */
 
 import { NextResponse } from 'next/server';
-
-// TODO: เชื่อมกับ database จริง
-// ตอนนี้ใช้ข้อมูลจำลอง
-const MOCK_USERS = [
-    {
-        id: '1',
-        email: 'admin@example.com',
-        password: '123456', // ในระบบจริงต้อง hash ด้วย bcrypt
-        name: 'Admin User',
-        role: 'admin',
-    },
-    {
-        id: '2',
-        email: 'user@example.com',
-        password: 'password',
-        name: 'Regular User',
-        role: 'user',
-    },
-];
+import { findUserByEmail } from '@/lib/mockDb';
 
 export async function POST(request) {
     try {
@@ -33,7 +19,10 @@ export async function POST(request) {
         }
 
         // ค้นหา user
-        const user = MOCK_USERS.find(u => u.email === email);
+        const user = findUserByEmail(email);
+
+        console.log('🔍 Login attempt:', { email });
+        console.log('👤 Found user:', user ? 'Yes' : 'No');
 
         if (!user) {
             return NextResponse.json(
@@ -43,7 +32,6 @@ export async function POST(request) {
         }
 
         // ตรวจสอบรหัสผ่าน
-        // TODO: ใช้ bcrypt.compare() ในระบบจริง
         if (user.password !== password) {
             return NextResponse.json(
                 { success: false, error: 'รหัสผ่านไม่ถูกต้อง' },
@@ -51,11 +39,11 @@ export async function POST(request) {
             );
         }
 
-        // สร้าง token (ในระบบจริงใช้ JWT)
+        // สร้าง token
         const token = Buffer.from(`${user.id}:${Date.now()}`).toString('base64');
 
         // ส่งข้อมูล user กลับ (ไม่ส่ง password)
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        // eslint-disable-next-line no-unused-vars
         const { password: userPassword, ...userWithoutPassword } = user;
 
         return NextResponse.json({

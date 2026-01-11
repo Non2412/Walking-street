@@ -1,4 +1,8 @@
-// API configuration and methods for market-api integration
+/**
+ * API Services - Market API Integration
+ */
+
+// API configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://market-api-n9paign16-suppchai0-projects.vercel.app/api';
 
 export interface Booking {
@@ -22,16 +26,19 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
-// Get all bookings
+// ========================================
+// BOOKINGS API (สำหรับใช้ในอนาคต)
+// ========================================
+
 export const getBookings = async (): Promise<Booking[]> => {
   try {
     const response = await fetch(`${API_BASE_URL}/bookings`);
     const data: ApiResponse<Booking[]> = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to fetch bookings');
     }
-    
+
     return data.data || [];
   } catch (error) {
     console.error('Error fetching bookings:', error);
@@ -39,16 +46,15 @@ export const getBookings = async (): Promise<Booking[]> => {
   }
 };
 
-// Get single booking by ID
 export const getBookingById = async (id: string): Promise<Booking> => {
   try {
     const response = await fetch(`${API_BASE_URL}/bookings/${id}`);
     const data: ApiResponse<Booking> = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to fetch booking');
     }
-    
+
     return data.data!;
   } catch (error) {
     console.error(`Error fetching booking ${id}:`, error);
@@ -56,7 +62,6 @@ export const getBookingById = async (id: string): Promise<Booking> => {
   }
 };
 
-// Create new booking
 export const createBooking = async (booking: Omit<Booking, '_id' | 'createdAt' | 'updatedAt'>): Promise<Booking> => {
   try {
     const response = await fetch(`${API_BASE_URL}/bookings`, {
@@ -66,13 +71,13 @@ export const createBooking = async (booking: Omit<Booking, '_id' | 'createdAt' |
       },
       body: JSON.stringify(booking),
     });
-    
+
     const data: ApiResponse<Booking> = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to create booking');
     }
-    
+
     return data.data!;
   } catch (error) {
     console.error('Error creating booking:', error);
@@ -80,7 +85,6 @@ export const createBooking = async (booking: Omit<Booking, '_id' | 'createdAt' |
   }
 };
 
-// Update booking status (requires admin token)
 export const updateBooking = async (
   id: string,
   updates: Partial<Booking>,
@@ -90,23 +94,23 @@ export const updateBooking = async (
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
-    
+
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     const response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
       method: 'PUT',
       headers,
       body: JSON.stringify(updates),
     });
-    
+
     const data: ApiResponse<Booking> = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to update booking');
     }
-    
+
     return data.data!;
   } catch (error) {
     console.error(`Error updating booking ${id}:`, error);
@@ -114,28 +118,27 @@ export const updateBooking = async (
   }
 };
 
-// Delete booking (requires admin token)
 export const deleteBooking = async (id: string, token?: string): Promise<{ deletedCount: number }> => {
   try {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
-    
+
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     const response = await fetch(`${API_BASE_URL}/bookings/${id}`, {
       method: 'DELETE',
       headers,
     });
-    
+
     const data: ApiResponse<{ deletedCount: number }> = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Failed to delete booking');
     }
-    
+
     return data.data!;
   } catch (error) {
     console.error(`Error deleting booking ${id}:`, error);
@@ -143,7 +146,9 @@ export const deleteBooking = async (id: string, token?: string): Promise<{ delet
   }
 };
 
-// Admin login
+// ========================================
+// AUTH API
+// ========================================
 export const adminLogin = async (email: string, password: string): Promise<{ token: string }> => {
   try {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -153,13 +158,13 @@ export const adminLogin = async (email: string, password: string): Promise<{ tok
       },
       body: JSON.stringify({ email, password }),
     });
-    
+
     const data: ApiResponse<{ token: string; user: { email: string }; expiresIn: string }> = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Login failed');
     }
-    
+
     return { token: data.data!.token };
   } catch (error) {
     console.error('Error during admin login:', error);
@@ -167,7 +172,7 @@ export const adminLogin = async (email: string, password: string): Promise<{ tok
   }
 };
 
-// User signup
+
 export const userSignup = async (
   username: string,
   email: string,
@@ -182,13 +187,13 @@ export const userSignup = async (
       },
       body: JSON.stringify({ username, email, password, fullName }),
     });
-    
+
     const data: ApiResponse<{ token: string; user: any; expiresIn: string }> = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Signup failed');
     }
-    
+
     return { token: data.data!.token, user: data.data!.user };
   } catch (error) {
     console.error('Error during signup:', error);
@@ -196,7 +201,7 @@ export const userSignup = async (
   }
 };
 
-// User login
+
 export const userLogin = async (email: string, password: string): Promise<{ token: string; user: any }> => {
   try {
     const response = await fetch(`${API_BASE_URL}/auth/user-login`, {
@@ -206,13 +211,13 @@ export const userLogin = async (email: string, password: string): Promise<{ toke
       },
       body: JSON.stringify({ email, password }),
     });
-    
+
     const data: ApiResponse<{ token: string; user: any; expiresIn: string }> = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || 'Login failed');
     }
-    
+
     return { token: data.data!.token, user: data.data!.user };
   } catch (error) {
     console.error('Error during user login:', error);

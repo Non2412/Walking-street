@@ -96,16 +96,13 @@ export default function RegisterPage() {
             const result = await register(formData);
 
             if (result.success) {
-                router.push('/');
+                // Redirect to login page after successful registration
+                router.push('/login');
             } else {
-                setErrors({
-                    general: result.error || 'สมัครสมาชิกไม่สำเร็จ',
-                });
+                setErrors({ submit: result.error || 'การสมัครสมาชิกล้มเหลว' });
             }
-        } catch {
-            setErrors({
-                general: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง',
-            });
+        } catch (error) {
+            setErrors({ submit: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
         } finally {
             setIsLoading(false);
         }

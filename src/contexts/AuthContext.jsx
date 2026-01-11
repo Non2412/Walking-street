@@ -1,5 +1,6 @@
 /**
  * Auth Context - จัดการ Authentication State
+ * ใช้ local API routes (fallback from market-api)
  */
 
 'use client';
@@ -36,9 +37,11 @@ export function AuthProvider({ children }) {
         loadUser();
     }, []);
 
-    // Login
+    // Login - ใช้ local API
     const login = async (email, password) => {
         try {
+            console.log('🔐 Attempting login...');
+
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -51,6 +54,8 @@ export function AuthProvider({ children }) {
                 throw new Error(data.error || 'Login failed');
             }
 
+            console.log('✅ Login successful');
+
             // บันทึก user และ token
             setUser(data.user);
             localStorage.setItem('user', JSON.stringify(data.user));
@@ -58,13 +63,16 @@ export function AuthProvider({ children }) {
 
             return { success: true, user: data.user };
         } catch (error) {
+            console.error('❌ Login failed:', error.message);
             return { success: false, error: error.message };
         }
     };
 
-    // Register
+    // Register - ใช้ local API
     const register = async (userData) => {
         try {
+            console.log('📝 Attempting registration...');
+
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -77,6 +85,8 @@ export function AuthProvider({ children }) {
                 throw new Error(data.error || 'Registration failed');
             }
 
+            console.log('✅ Registration successful');
+
             // บันทึก user และ token
             setUser(data.user);
             localStorage.setItem('user', JSON.stringify(data.user));
@@ -84,6 +94,7 @@ export function AuthProvider({ children }) {
 
             return { success: true, user: data.user };
         } catch (error) {
+            console.error('❌ Registration failed:', error.message);
             return { success: false, error: error.message };
         }
     };

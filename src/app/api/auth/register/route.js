@@ -1,20 +1,10 @@
 /**
- * Register API Route
+ * Register API Route - Using Shared Database
  * POST /api/auth/register
  */
 
 import { NextResponse } from 'next/server';
-
-// ตอนนี้เก็บใน memory (จะหายเมื่อ restart server)
-let USERS = [
-    {
-        id: '1',
-        email: 'admin@example.com',
-        password: '123456',
-        name: 'Admin User',
-        role: 'admin',
-    },
-];
+import { findUserByEmail, addUser, getAllUsers } from '@/lib/mockDb';
 
 export async function POST(request) {
     try {
@@ -43,7 +33,7 @@ export async function POST(request) {
         }
 
         // ตรวจสอบว่าอีเมลซ้ำหรือไม่
-        const existingUser = USERS.find(u => u.email === email);
+        const existingUser = findUserByEmail(email);
         if (existingUser) {
             return NextResponse.json(
                 { success: false, error: 'อีเมลนี้ถูกใช้งานแล้ว' },
@@ -52,10 +42,11 @@ export async function POST(request) {
         }
 
         // สร้าง user ใหม่
+        const allUsers = getAllUsers();
         const newUser = {
-            id: String(USERS.length + 1),
-            email,
-            password, // TODO: hash ด้วย bcrypt ในระบบจริง
+            id: String(allUsers.length + 1),
+            email: email.toLowerCase(),
+            password,
             name,
             shopName,
             shopDescription,
@@ -64,13 +55,13 @@ export async function POST(request) {
             createdAt: new Date().toISOString(),
         };
 
-        USERS.push(newUser);
+        addUser(newUser);
 
         // สร้าง token
         const token = Buffer.from(`${newUser.id}:${Date.now()}`).toString('base64');
 
         // ส่งข้อมูล user กลับ (ไม่ส่ง password)
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        // eslint-disable-next-line no-unused-vars
         const { password: userPassword, ...userWithoutPassword } = newUser;
 
         return NextResponse.json({
