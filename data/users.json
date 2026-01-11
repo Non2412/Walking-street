@@ -1,0 +1,35 @@
+[
+  {
+    "id": "1",
+    "email": "admin@example.com",
+    "password": "123456",
+    "name": "Admin User",
+    "shopName": "ร้านตัวอย่าง",
+    "shopDescription": "ร้านค้าตัวอย่าง",
+    "phone": "0812345678",
+    "role": "admin",
+    "createdAt": "2026-01-11T15:04:45.040Z"
+  },
+  {
+    "id": "2",
+    "email": "user@example.com",
+    "password": "123456",
+    "name": "Test User",
+    "shopName": "ร้านทดสอบ",
+    "shopDescription": "ร้านค้าทดสอบ",
+    "phone": "0823456789",
+    "role": "user",
+    "createdAt": "2026-01-11T15:04:45.040Z"
+  },
+  {
+    "id": "3",
+    "email": "ctf2547@gmail.com",
+    "password": "1234567",
+    "name": "sittirat gamethai",
+    "shopName": "awdd",
+    "shopDescription": "ขนม",
+    "phone": "0945103675",
+    "role": "user",
+    "createdAt": "2026-01-11T15:04:45.107Z"
+  }
+]

@@ -65,12 +65,12 @@ function DashboardContent() {
                     {stats.map((stat) => (
                         <div key={stat.id} className={styles.statCard}>
                             <div className={styles.statHeader}>
-                                <span style={{ ...styles.statIcon, backgroundColor: stat.color + '20' }}>
+                                <span className={styles.statIcon} style={{ backgroundColor: stat.color + '20' }}>
                                     {stat.icon}
                                 </span>
                                 <h3 className={styles.statTitle}>{stat.title}</h3>
                             </div>
-                            <p style={{ ...styles.statValue, color: stat.color }}>{stat.value}</p>
+                            <p className={styles.statValue} style={{ color: stat.color }}>{stat.value}</p>
                         </div>
                     ))}
                 </div>
@@ -83,9 +83,10 @@ function DashboardContent() {
                             <button
                                 key={action.id}
                                 onClick={() => router.push(action.path)}
-                                style={{ ...styles.actionCard, borderTop: `4px solid ${action.color}` }}
+                                className={styles.actionCard}
+                                style={{ borderTop: `4px solid ${action.color}` }}
                             >
-                                <div style={{ ...styles.actionIcon, color: action.color }}>
+                                <div className={styles.actionIcon} style={{ color: action.color }}>
                                     {action.icon}
                                 </div>
                                 <span className={styles.actionTitle}>{action.title}</span>
@@ -100,7 +101,7 @@ function DashboardContent() {
                     <div className={styles.activitiesCard}>
                         {recentActivities.map((activity) => (
                             <div key={activity.id} className={styles.activityItem}>
-                                <div style={{ ...styles.activityIcon, backgroundColor: activity.color + '20', color: activity.color }}>
+                                <div className={styles.activityIcon} style={{ backgroundColor: activity.color + '20', color: activity.color }}>
                                     {activity.icon}
                                 </div>
                                 <div className={styles.activityContent}>

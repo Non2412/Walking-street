@@ -1,9 +1,12 @@
 /**
- * Persistent Mock Database using localStorage
- * ข้อมูลจะไม่หายแม้รีสตาร์ทเซิร์ฟเวอร์
+ * File-based Mock Database
+ * เก็บข้อมูลใน JSON file แทน localStorage
  */
 
-const STORAGE_KEY = 'walking_street_users_db';
+import fs from 'fs';
+import path from 'path';
+
+const DB_FILE = path.join(process.cwd(), 'data', 'users.json');
 
 // Default users
 const DEFAULT_USERS = [
@@ -31,54 +34,65 @@ const DEFAULT_USERS = [
     },
 ];
 
-// โหลดข้อมูลจาก localStorage
-function loadFromStorage() {
-    if (typeof window === 'undefined') {
-        return DEFAULT_USERS; // Server-side: ใช้ default
+// สร้าง directory ถ้ายังไม่มี
+function ensureDataDir() {
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
     }
+}
+
+// โหลดข้อมูลจาก file
+function loadFromFile() {
+    ensureDataDir();
 
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            const users = JSON.parse(stored);
-            console.log('📚 Loaded', users.length, 'users from localStorage');
+        if (fs.existsSync(DB_FILE)) {
+            const data = fs.readFileSync(DB_FILE, 'utf8');
+            const users = JSON.parse(data);
+            console.log('📚 Loaded', users.length, 'users from file');
             return users;
         }
     } catch (error) {
-        console.error('Error loading from localStorage:', error);
+        console.error('Error loading from file:', error);
     }
 
-    // ถ้าไม่มีข้อมูล ใช้ default
+    // ถ้าไม่มีไฟล์ ใช้ default
     console.log('📝 Initializing with default users');
-    saveToStorage(DEFAULT_USERS);
+    saveToFile(DEFAULT_USERS);
     return DEFAULT_USERS;
 }
 
-// บันทึกลง localStorage
-function saveToStorage(users) {
-    if (typeof window === 'undefined') {
-        return;
-    }
+// บันทึกลง file
+function saveToFile(users) {
+    ensureDataDir();
 
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-        console.log('💾 Saved', users.length, 'users to localStorage');
+        const jsonData = JSON.stringify(users, null, 2);
+        fs.writeFileSync(DB_FILE, jsonData, 'utf8');
+        console.log('💾 Saved', users.length, 'users to file:', DB_FILE);
+        console.log('📝 File content:', jsonData.substring(0, 100) + '...');
+
+        // ตรวจสอบว่าเขียนสำเร็จ
+        const verify = fs.readFileSync(DB_FILE, 'utf8');
+        const verifyUsers = JSON.parse(verify);
+        console.log('✅ Verified:', verifyUsers.length, 'users in file');
     } catch (error) {
-        console.error('Error saving to localStorage:', error);
+        console.error('❌ Error saving to file:', error);
     }
 }
 
 // ค้นหา user ด้วย email
 export function findUserByEmail(email) {
-    const users = loadFromStorage();
+    const users = loadFromFile();
     const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    console.log('🔎 Search:', email, '→', found ? 'Found' : 'Not found');
+    console.log('🔎 Search:', email, '→', found ? `Found: ${found.email}` : 'Not found');
     return found;
 }
 
 // เพิ่ม user ใหม่
 export function addUser(user) {
-    const users = loadFromStorage();
+    const users = loadFromFile();
 
     // ตรวจสอบ email ซ้ำ
     const exists = users.find(u => u.email.toLowerCase() === user.email.toLowerCase());
@@ -94,7 +108,7 @@ export function addUser(user) {
     };
 
     users.push(newUser);
-    saveToStorage(users);
+    saveToFile(users);
 
     console.log('➕ Added user:', newUser.email);
     return newUser;
@@ -102,14 +116,11 @@ export function addUser(user) {
 
 // ดึงข้อมูล users ทั้งหมด
 export function getAllUsers() {
-    return loadFromStorage();
+    return loadFromFile();
 }
 
 // Reset database
 export function resetDatabase() {
-    if (typeof window !== 'undefined') {
-        localStorage.removeItem(STORAGE_KEY);
-        saveToStorage(DEFAULT_USERS);
-        console.log('🔄 Database reset');
-    }
+    saveToFile(DEFAULT_USERS);
+    console.log('🔄 Database reset');
 }
