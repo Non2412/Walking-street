@@ -14,6 +14,7 @@ function BookingsContent() {
     const [selectedDay, setSelectedDay] = useState('saturday'); // saturday or sunday
     const [selectedBooths, setSelectedBooths] = useState([]);
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [showLimitModal, setShowLimitModal] = useState(false);
 
     // สร้างข้อมูลบูธตามวันที่เลือก (ใช้ useMemo เพื่อไม่ให้สุ่มใหม่ทุกครั้ง)
     const boothsData = React.useMemo(() => {
@@ -87,6 +88,10 @@ function BookingsContent() {
                 if (isSelected) {
                     return prev.filter(b => b.id !== booth.id);
                 } else {
+                    if (prev.length >= 3) {
+                        setShowLimitModal(true);
+                        return prev;
+                    }
                     return [...prev, booth];
                 }
             });
@@ -443,6 +448,24 @@ function BookingsContent() {
                                 <button className={styles.confirmButton} onClick={() => alert('ดำเนินการจองเรียบร้อย!')}>ยืนยันการชำระเงิน</button>
                                 <button className={styles.cancelButton} onClick={() => setShowBookingModal(false)}>ยกเลิก</button>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Limit Warning Modal */}
+                {showLimitModal && (
+                    <div className={styles.modal} onClick={() => setShowLimitModal(false)}>
+                        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+                            <h3 style={{ color: '#e74c3c' }}>แจ้งเตือน</h3>
+                            <p style={{ margin: '16px 0', fontSize: '16px' }}>คุณสามารถเลือกจองได้สูงสุด 3 บูธต่อครั้งเท่านั้น</p>
+                            <button
+                                className={styles.confirmButton}
+                                onClick={() => setShowLimitModal(false)}
+                                style={{ width: '100%', marginTop: '8px' }}
+                            >
+                                ตกลง
+                            </button>
                         </div>
                     </div>
                 )}
