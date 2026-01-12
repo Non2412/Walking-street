@@ -18,9 +18,6 @@ export default function Navbar() {
     const menuItems = [
         { path: '/dashboard', label: 'หน้าหลัก', icon: '🏠' },
         { path: '/bookings', label: 'การจอง', icon: '📋' },
-        { path: '/inventory', label: 'คลังสินค้า', icon: '📦' },
-        { path: '/reports', label: 'รายงาน', icon: '📊' },
-        { path: '/settings', label: 'ตั้งค่า', icon: '⚙️' },
     ];
 
     const handleLogout = () => {
