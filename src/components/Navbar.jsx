@@ -16,8 +16,7 @@ export default function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const menuItems = [
-        { path: '/dashboard', label: 'หน้าหลัก', icon: '🏠' },
-        { path: '/bookings', label: 'การจอง', icon: '📋' },
+        { path: '/bookings', label: 'หน้าหลัก', icon: '🏠' },
     ];
 
     const handleLogout = () => {
@@ -31,7 +30,7 @@ export default function Navbar() {
         <nav style={styles.navbar}>
             <div style={styles.container}>
                 {/* Logo */}
-                <div style={styles.logoSection} onClick={() => router.push('/dashboard')}>
+                <div style={styles.logoSection} onClick={() => router.push('/bookings')}>
                     <img
                         src="/img/walking.png"
                         alt="Logo"

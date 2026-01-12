@@ -8,9 +8,11 @@
 import React, { useState } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
+import { useAuth } from '@/contexts/AuthContext';
 import styles from './page.module.css';
 
 function BookingsContent() {
+    const { user } = useAuth();
     const [selectedDay, setSelectedDay] = useState('saturday'); // saturday or sunday
     const [selectedBooths, setSelectedBooths] = useState([]);
     const [showBookingModal, setShowBookingModal] = useState(false);
@@ -131,10 +133,26 @@ function BookingsContent() {
             <div className={styles.container}>
                 <div className={styles.layoutWrapper}>
                     <div className={styles.mainContent}>
-                        {/* Header */}
-                        <div className={styles.header}>
-                            <h1 className={styles.title}>🏪 จองพื้นที่ขายของ</h1>
-                            <p className={styles.subtitle}>เลือกวันและบูธที่ต้องการจอง</p>
+                        {/* Welcome Section */}
+                        <div className={styles.welcomeSection}>
+                            <div>
+                                <h1 className={styles.welcomeTitle}>
+                                    สวัสดี, {user?.name}! 👋
+                                </h1>
+                                <p className={styles.welcomeSubtitle}>
+                                    ยินดีต้อนรับสู่ระบบจัดการตลาดถนนคนเดินศรีสะเกษ
+                                </p>
+                            </div>
+                            <div className={styles.dateSection}>
+                                <span className={styles.dateText}>
+                                    📅 {new Date().toLocaleDateString('th-TH', {
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}
+                                </span>
+                            </div>
                         </div>
 
                         {/* Day Selection */}

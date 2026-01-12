@@ -11,6 +11,44 @@
     padding: 40px 24px;
 }
 
+.welcomeSection {
+    background-color: #fff;
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.welcomeTitle {
+    font-size: 32px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin: 0 0 8px 0;
+}
+
+.welcomeSubtitle {
+    font-size: 16px;
+    color: #7f8c8d;
+    margin: 0;
+}
+
+.dateSection {
+    padding: 12px 20px;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+}
+
+.dateText {
+    font-size: 14px;
+    color: #666;
+    font-weight: 600;
+}
+
 /* Header */
 .header {
     margin-bottom: 32px;
