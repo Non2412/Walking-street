@@ -62,7 +62,9 @@ export default function LoginPage() {
             const result = await login(formData.email, formData.password);
 
             if (result.success) {
-                router.push('/bookings');
+                // Redirect ตามบทบาท
+                const redirectUrl = result.user?.role === 'admin' ? '/admin-dashboard' : '/user-dashboard';
+                router.push(redirectUrl);
             } else {
                 setErrors({
                     general: result.error || 'เข้าสู่ระบบไม่สำเร็จ',
