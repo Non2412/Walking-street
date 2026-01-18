@@ -12,7 +12,7 @@ export default function LoginPage() {
         password: '',
     });
     const [errors, setErrors] = useState({});
-    const [isLoading, setIsLoading] = useState(false);อ
+    const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
     const handleChange = (e) => {
