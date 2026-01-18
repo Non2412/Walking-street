@@ -62,7 +62,7 @@ export default function LoginPage() {
             const result = await login(formData.email, formData.password);
 
             if (result.success) {
-                router.push('/dashboard');
+                router.push('/bookings');
             } else {
                 setErrors({
                     general: result.error || 'เข้าสู่ระบบไม่สำเร็จ',

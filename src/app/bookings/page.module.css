@@ -11,6 +11,44 @@
     padding: 40px 24px;
 }
 
+.welcomeSection {
+    background-color: #fff;
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.welcomeTitle {
+    font-size: 32px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin: 0 0 8px 0;
+}
+
+.welcomeSubtitle {
+    font-size: 16px;
+    color: #7f8c8d;
+    margin: 0;
+}
+
+.dateSection {
+    padding: 12px 20px;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+}
+
+.dateText {
+    font-size: 14px;
+    color: #666;
+    font-weight: 600;
+}
+
 /* Header */
 .header {
     margin-bottom: 32px;
@@ -369,4 +407,119 @@
         height: 32px;
         font-size: 16px;
     }
+
+    .layoutWrapper {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        position: static;
+        margin-top: 24px;
+    }
+}
+
+.layoutWrapper {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.mainContent {
+    flex: 1;
+    min-width: 0;
+}
+
+.sidebar {
+    width: 320px;
+    background-color: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: calc(100vh - 120px);
+}
+
+.sidebarTitle {
+    font-size: 20px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin: 0;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.selectedList {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 4px;
+}
+
+.selectedItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.selectedItemInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.selectedItemName {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.selectedItemPrice {
+    font-size: 14px;
+    color: #7f8c8d;
+}
+
+.removeButton {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.removeButton:hover {
+    background-color: #fdeaea;
+}
+
+.sidebarFooter {
+    border-top: 1px solid #eee;
+    padding-top: 16px;
+}
+
+.totalPrice {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.emptySelection {
+    text-align: center;
+    color: #95a5a6;
+    padding: 32px 0;
+    font-size: 14px;
 }

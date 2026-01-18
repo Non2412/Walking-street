@@ -8,12 +8,15 @@
 import React, { useState } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
+import { useAuth } from '@/contexts/AuthContext';
 import styles from './page.module.css';
 
 function BookingsContent() {
+    const { user } = useAuth();
     const [selectedDay, setSelectedDay] = useState('saturday'); // saturday or sunday
-    const [selectedBooth, setSelectedBooth] = useState(null);
+    const [selectedBooths, setSelectedBooths] = useState([]);
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [showLimitModal, setShowLimitModal] = useState(false);
 
     // สร้างข้อมูลบูธตามวันที่เลือก (ใช้ useMemo เพื่อไม่ให้สุ่มใหม่ทุกครั้ง)
     const boothsData = React.useMemo(() => {
@@ -82,21 +85,35 @@ function BookingsContent() {
 
     const handleBoothClick = (booth) => {
         if (booth.status === 'available') {
-            setSelectedBooth(booth);
-            setShowBookingModal(true);
+            setSelectedBooths(prev => {
+                const isSelected = prev.some(b => b.id === booth.id);
+                if (isSelected) {
+                    return prev.filter(b => b.id !== booth.id);
+                } else {
+                    if (prev.length >= 3) {
+                        setShowLimitModal(true);
+                        return prev;
+                    }
+                    return [...prev, booth];
+                }
+            });
         }
     };
 
-    const getStatusIcon = (status) => {
+    const isBoothSelected = (id) => selectedBooths.some(b => b.id === id);
+
+    const getStatusIcon = (status, isSelected) => {
+        if (isSelected) return '✓';
         switch (status) {
-            case 'available': return '✓';
+            case 'available': return '';
             case 'booked': return '🔒';
             case 'pending': return '⏳';
             default: return '';
         }
     };
 
-    const getStatusColor = (status) => {
+    const getStatusColor = (status, isSelected) => {
+        if (isSelected) return '#fff';
         switch (status) {
             case 'available': return '#27ae60';
             case 'booked': return '#e74c3c';
@@ -105,254 +122,368 @@ function BookingsContent() {
         }
     };
 
+    const getTotalPrice = () => {
+        return selectedBooths.reduce((sum, booth) => sum + booth.price, 0);
+    };
+
     return (
         <div className={styles.pageContainer}>
             <Navbar />
 
             <div className={styles.container}>
-                {/* Header */}
-                <div className={styles.header}>
-                    <h1 className={styles.title}>🏪 จองพื้นที่ขายของ</h1>
-                    <p className={styles.subtitle}>เลือกวันและบูธที่ต้องการจอง</p>
+                <div className={styles.layoutWrapper}>
+                    <div className={styles.mainContent}>
+                        {/* Welcome Section */}
+                        <div className={styles.welcomeSection}>
+                            <div>
+                                <h1 className={styles.welcomeTitle}>
+                                    สวัสดี, {user?.name}! 👋
+                                </h1>
+                                <p className={styles.welcomeSubtitle}>
+                                    ยินดีต้อนรับสู่ระบบจัดการตลาดถนนคนเดินศรีสะเกษ
+                                </p>
+                            </div>
+                            <div className={styles.dateSection}>
+                                <span className={styles.dateText}>
+                                    📅 {new Date().toLocaleDateString('th-TH', {
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Day Selection */}
+                        <div className={styles.dayButtons}>
+                            <button
+                                className={`${styles.dayButton} ${selectedDay === 'saturday' ? styles.dayButtonActive : ''}`}
+                                style={{
+                                    backgroundColor: selectedDay === 'saturday' ? '#667eea' : '#f8f9fa',
+                                    color: selectedDay === 'saturday' ? '#fff' : '#666'
+                                }}
+                                onClick={() => {
+                                    setSelectedDay('saturday');
+                                    setSelectedBooths([]); // Reset selection on day change
+                                }}
+                            >
+                                <span className={styles.dayIcon}>📅</span>
+                                <span className={styles.dayText}>วันเสาร์</span>
+                                <span className={styles.daySubtext}>เปิดจองพรุ่งนี้</span>
+                            </button>
+                            <button
+                                className={`${styles.dayButton} ${selectedDay === 'sunday' ? styles.dayButtonActive : ''}`}
+                                style={{
+                                    backgroundColor: selectedDay === 'sunday' ? '#f093fb' : '#f8f9fa',
+                                    color: selectedDay === 'sunday' ? '#fff' : '#666'
+                                }}
+                                onClick={() => {
+                                    setSelectedDay('sunday');
+                                    setSelectedBooths([]); // Reset selection on day change
+                                }}
+                            >
+                                <span className={styles.dayIcon}>📅</span>
+                                <span className={styles.dayText}>วันอาทิตย์</span>
+                                <span className={styles.daySubtext}>เปิดจองพรุ่งนี้</span>
+                            </button>
+                        </div>
+
+                        {/* Statistics */}
+                        <div className={styles.statsGrid}>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon} style={{ color: '#3498db' }}>📊</div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statValue}>{stats.total}</div>
+                                    <div className={styles.statLabel}>ทั้งหมด</div>
+                                </div>
+                            </div>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon} style={{ color: '#27ae60' }}>✓</div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statValue}>{stats.available}</div>
+                                    <div className={styles.statLabel}>ว่าง</div>
+                                </div>
+                            </div>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon} style={{ color: '#e74c3c' }}>🔒</div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statValue}>{stats.booked}</div>
+                                    <div className={styles.statLabel}>จองแล้ว</div>
+                                </div>
+                            </div>
+                            <div className={styles.statCard}>
+                                <div className={styles.statIcon} style={{ color: '#f39c12' }}>⏳</div>
+                                <div className={styles.statContent}>
+                                    <div className={styles.statValue}>{stats.pending}</div>
+                                    <div className={styles.statLabel}>รอชำระ</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Area Map */}
+                        <div className={styles.mapSection}>
+                            <h2 className={styles.mapTitle}>แผนผังพื้นที่</h2>
+
+                            {/* Zone A */}
+                            <div className={styles.zoneSection}>
+                                <div className={styles.boothRow}>
+                                    <button className={styles.scrollButton} onClick={() => document.getElementById('zoneA').scrollBy({ left: -200, behavior: 'smooth' })}>‹</button>
+                                    <div className={styles.boothScroll} id="zoneA">
+                                        {boothsData.A.map(booth => {
+                                            const isSelected = isBoothSelected(booth.id);
+                                            return (
+                                                <div
+                                                    key={booth.id}
+                                                    className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
+                                                    style={{
+                                                        borderColor: isSelected ? '#3498db' : '#27ae60',
+                                                        backgroundColor: isSelected ? '#3498db' : (booth.status === 'available' ? '#fff' :
+                                                            booth.status === 'booked' ? '#fadbd8' : '#fef5e7'),
+                                                        color: isSelected ? '#fff' : 'inherit',
+                                                        transform: isSelected ? 'scale(1.05)' : 'none',
+                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : ''
+                                                    }}
+                                                    onClick={() => handleBoothClick(booth)}
+                                                >
+                                                    <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
+                                                    <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
+                                                    <div
+                                                        className={styles.boothStatus}
+                                                        style={{ color: getStatusColor(booth.status, isSelected) }}
+                                                    >
+                                                        {getStatusIcon(booth.status, isSelected)}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <button className={styles.scrollButton} onClick={() => document.getElementById('zoneA').scrollBy({ left: 200, behavior: 'smooth' })}>›</button>
+                                </div>
+                            </div>
+
+                            {/* Zone B */}
+                            <div className={styles.zoneSection}>
+                                <div className={styles.zoneHeader} style={{ backgroundColor: '#95a5a6' }}>
+                                    <span>🚶 ทางเดิน</span>
+                                </div>
+
+                                <div className={styles.boothRow}>
+                                    <button className={styles.scrollButton} onClick={() => document.getElementById('zoneB1').scrollBy({ left: -200, behavior: 'smooth' })}>‹</button>
+                                    <div className={styles.boothScroll} id="zoneB1">
+                                        {boothsData.B.slice(0, Math.ceil(boothsData.B.length / 2)).map(booth => {
+                                            const isSelected = isBoothSelected(booth.id);
+                                            return (
+                                                <div
+                                                    key={booth.id}
+                                                    className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
+                                                    style={{
+                                                        borderColor: isSelected ? '#3498db' : '#f39c12',
+                                                        backgroundColor: isSelected ? '#3498db' : (booth.status === 'available' ? '#fff' :
+                                                            booth.status === 'booked' ? '#fadbd8' : '#fef5e7'),
+                                                        color: isSelected ? '#fff' : 'inherit',
+                                                        transform: isSelected ? 'scale(1.05)' : 'none',
+                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : ''
+                                                    }}
+                                                    onClick={() => handleBoothClick(booth)}
+                                                >
+                                                    <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
+                                                    <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
+                                                    <div
+                                                        className={styles.boothStatus}
+                                                        style={{ color: getStatusColor(booth.status, isSelected) }}
+                                                    >
+                                                        {getStatusIcon(booth.status, isSelected)}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <button className={styles.scrollButton} onClick={() => document.getElementById('zoneB1').scrollBy({ left: 200, behavior: 'smooth' })}>›</button>
+                                </div>
+
+                                <div className={styles.boothRow} style={{ marginTop: '12px' }}>
+                                    <button className={styles.scrollButton} onClick={() => document.getElementById('zoneB2').scrollBy({ left: -200, behavior: 'smooth' })}>‹</button>
+                                    <div className={styles.boothScroll} id="zoneB2">
+                                        {boothsData.B.slice(Math.ceil(boothsData.B.length / 2)).map(booth => {
+                                            const isSelected = isBoothSelected(booth.id);
+                                            return (
+                                                <div
+                                                    key={booth.id}
+                                                    className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
+                                                    style={{
+                                                        borderColor: isSelected ? '#3498db' : '#f39c12',
+                                                        backgroundColor: isSelected ? '#3498db' : (booth.status === 'available' ? '#fff' :
+                                                            booth.status === 'booked' ? '#fadbd8' : '#fef5e7'),
+                                                        color: isSelected ? '#fff' : 'inherit',
+                                                        transform: isSelected ? 'scale(1.05)' : 'none',
+                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : ''
+                                                    }}
+                                                    onClick={() => handleBoothClick(booth)}
+                                                >
+                                                    <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
+                                                    <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
+                                                    <div
+                                                        className={styles.boothStatus}
+                                                        style={{ color: getStatusColor(booth.status, isSelected) }}
+                                                    >
+                                                        {getStatusIcon(booth.status, isSelected)}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <button className={styles.scrollButton} onClick={() => document.getElementById('zoneB2').scrollBy({ left: 200, behavior: 'smooth' })}>›</button>
+                                </div>
+                            </div>
+
+                            {/* Zone C */}
+                            <div className={styles.zoneSection}>
+                                <div className={styles.zoneHeader} style={{ backgroundColor: '#95a5a6' }}>
+                                    <span>🚶 ทางเดิน</span>
+                                </div>
+                                <div className={styles.boothRow}>
+                                    <button className={styles.scrollButton} onClick={() => document.getElementById('zoneC').scrollBy({ left: -200, behavior: 'smooth' })}>‹</button>
+                                    <div className={styles.boothScroll} id="zoneC">
+                                        {boothsData.C.map(booth => {
+                                            const isSelected = isBoothSelected(booth.id);
+                                            return (
+                                                <div
+                                                    key={booth.id}
+                                                    className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
+                                                    style={{
+                                                        borderColor: isSelected ? '#3498db' : '#3498db',
+                                                        backgroundColor: isSelected ? '#3498db' : (booth.status === 'available' ? '#fff' :
+                                                            booth.status === 'booked' ? '#fadbd8' : '#fef5e7'),
+                                                        color: isSelected ? '#fff' : 'inherit',
+                                                        transform: isSelected ? 'scale(1.05)' : 'none',
+                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : ''
+                                                    }}
+                                                    onClick={() => handleBoothClick(booth)}
+                                                >
+                                                    <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
+                                                    <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
+                                                    <div
+                                                        className={styles.boothStatus}
+                                                        style={{ color: getStatusColor(booth.status, isSelected) }}
+                                                    >
+                                                        {getStatusIcon(booth.status, isSelected)}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <button className={styles.scrollButton} onClick={() => document.getElementById('zoneC').scrollBy({ left: 200, behavior: 'smooth' })}>›</button>
+                                </div>
+                            </div>
+
+                            {/* Legend */}
+                            <div className={styles.legend}>
+                                <div className={styles.legendItem}>
+                                    <span className={styles.legendDot} style={{ backgroundColor: '#27ae60' }}></span>
+                                    <span>สีเขียว: ว่าง (Available)</span>
+                                </div>
+                                <div className={styles.legendItem}>
+                                    <span className={styles.legendDot} style={{ backgroundColor: '#e74c3c' }}></span>
+                                    <span>สีแดง: จองแล้ว (Booked)</span>
+                                </div>
+                                <div className={styles.legendItem}>
+                                    <span className={styles.legendDot} style={{ backgroundColor: '#f39c12' }}></span>
+                                    <span>สีส้ม: รอชำระ (Pending)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Sidebar - Selected Booths */}
+                    <div className={styles.sidebar}>
+                        <h3 className={styles.sidebarTitle}>รายการที่เลือก ({selectedBooths.length})</h3>
+
+                        <div className={styles.selectedList}>
+                            {selectedBooths.length === 0 ? (
+                                <div className={styles.emptySelection}>
+                                    ยังไม่ได้เลือกบูธ
+                                    <br />
+                                    คลิกที่บูธเพื่อเลือก
+                                </div>
+                            ) : (
+                                selectedBooths.map(booth => (
+                                    <div key={booth.id} className={styles.selectedItem}>
+                                        <div className={styles.selectedItemInfo}>
+                                            <span className={styles.selectedItemName}>บูธ {booth.id} ({booth.zone})</span>
+                                            <span className={styles.selectedItemPrice}>฿{booth.price.toLocaleString()}</span>
+                                        </div>
+                                        <button
+                                            className={styles.removeButton}
+                                            onClick={() => handleBoothClick(booth)}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div className={styles.sidebarFooter}>
+                            <div className={styles.totalPrice}>
+                                <span>ยอดรวม</span>
+                                <span style={{ color: '#27ae60' }}>฿{getTotalPrice().toLocaleString()}</span>
+                            </div>
+                            <button
+                                className={styles.confirmButton}
+                                disabled={selectedBooths.length === 0}
+                                style={{ width: '100%', opacity: selectedBooths.length === 0 ? 0.5 : 1, cursor: selectedBooths.length === 0 ? 'not-allowed' : 'pointer' }}
+                                onClick={() => setShowBookingModal(true)}
+                            >
+                                ยืนยันการจอง
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Day Selection */}
-                <div className={styles.dayButtons}>
-                    <button
-                        className={`${styles.dayButton} ${selectedDay === 'saturday' ? styles.dayButtonActive : ''}`}
-                        style={{
-                            backgroundColor: selectedDay === 'saturday' ? '#667eea' : '#f8f9fa',
-                            color: selectedDay === 'saturday' ? '#fff' : '#666'
-                        }}
-                        onClick={() => setSelectedDay('saturday')}
-                    >
-                        <span className={styles.dayIcon}>📅</span>
-                        <span className={styles.dayText}>วันเสาร์</span>
-                        <span className={styles.daySubtext}>เปิดจองพรุ่งนี้</span>
-                    </button>
-                    <button
-                        className={`${styles.dayButton} ${selectedDay === 'sunday' ? styles.dayButtonActive : ''}`}
-                        style={{
-                            backgroundColor: selectedDay === 'sunday' ? '#f093fb' : '#f8f9fa',
-                            color: selectedDay === 'sunday' ? '#fff' : '#666'
-                        }}
-                        onClick={() => setSelectedDay('sunday')}
-                    >
-                        <span className={styles.dayIcon}>📅</span>
-                        <span className={styles.dayText}>วันอาทิตย์</span>
-                        <span className={styles.daySubtext}>เปิดจองพรุ่งนี้</span>
-                    </button>
-                </div>
-
-                {/* Statistics */}
-                <div className={styles.statsGrid}>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ color: '#3498db' }}>📊</div>
-                        <div className={styles.statContent}>
-                            <div className={styles.statValue}>{stats.total}</div>
-                            <div className={styles.statLabel}>ทั้งหมด</div>
-                        </div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ color: '#27ae60' }}>✓</div>
-                        <div className={styles.statContent}>
-                            <div className={styles.statValue}>{stats.available}</div>
-                            <div className={styles.statLabel}>ว่าง</div>
-                        </div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ color: '#e74c3c' }}>🔒</div>
-                        <div className={styles.statContent}>
-                            <div className={styles.statValue}>{stats.booked}</div>
-                            <div className={styles.statLabel}>จองแล้ว</div>
-                        </div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ color: '#f39c12' }}>⏳</div>
-                        <div className={styles.statContent}>
-                            <div className={styles.statValue}>{stats.pending}</div>
-                            <div className={styles.statLabel}>รอชำระ</div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Area Map */}
-                <div className={styles.mapSection}>
-                    <h2 className={styles.mapTitle}>แผนผังพื้นที่</h2>
-
-                    {/* Zone A - 1 แถว */}
-                    <div className={styles.zoneSection}>
-                        <div className={styles.boothRow}>
-                            {selectedDay !== 'saturday' && (
-                                <button className={styles.scrollButton} onClick={() => document.getElementById('zoneA').scrollBy({ left: -200, behavior: 'smooth' })}>‹</button>
-                            )}
-                            <div className={styles.boothScroll} id="zoneA">
-                                {boothsData.A.map(booth => (
-                                    <div
-                                        key={booth.id}
-                                        className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
-                                        style={{
-                                            borderColor: '#27ae60',
-                                            backgroundColor: booth.status === 'available' ? '#fff' :
-                                                booth.status === 'booked' ? '#fadbd8' : '#fef5e7'
-                                        }}
-                                        onClick={() => handleBoothClick(booth)}
-                                    >
-                                        <div className={styles.boothNumber}>{booth.id}</div>
-                                        <div className={styles.boothPrice}>฿{booth.price}</div>
-                                        <div
-                                            className={styles.boothStatus}
-                                            style={{ color: getStatusColor(booth.status) }}
-                                        >
-                                            {getStatusIcon(booth.status)}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            {selectedDay !== 'saturday' && (
-                                <button className={styles.scrollButton} onClick={() => document.getElementById('zoneA').scrollBy({ left: 200, behavior: 'smooth' })}>›</button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Zone B - 2 แถว */}
-                    <div className={styles.zoneSection} style={selectedDay === 'saturday' ? { width: 'fit-content', display: 'flex', flexDirection: 'column' } : {}}>
-                        <div className={styles.zoneHeader} style={{ backgroundColor: '#f39c12', width: '100%' }}>
-                            <span>🚶 ทางเดิน</span>
-                        </div>
-                        {/* แถวที่ 1: ครึ่งแรกของ Zone B */}
-                        <div className={styles.boothRow}>
-                            {selectedDay !== 'saturday' && (
-                                <button className={styles.scrollButton} onClick={() => document.getElementById('zoneB1').scrollBy({ left: -200, behavior: 'smooth' })}>‹</button>
-                            )}
-                            <div className={styles.boothScroll} id="zoneB1">
-                                {boothsData.B.slice(0, Math.ceil(boothsData.B.length / 2)).map(booth => (
-                                    <div
-                                        key={booth.id}
-                                        className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
-                                        style={{
-                                            borderColor: '#f39c12',
-                                            backgroundColor: booth.status === 'available' ? '#fff' :
-                                                booth.status === 'booked' ? '#fadbd8' : '#fef5e7'
-                                        }}
-                                        onClick={() => handleBoothClick(booth)}
-                                    >
-                                        <div className={styles.boothNumber}>{booth.id}</div>
-                                        <div className={styles.boothPrice}>฿{booth.price}</div>
-                                        <div
-                                            className={styles.boothStatus}
-                                            style={{ color: getStatusColor(booth.status) }}
-                                        >
-                                            {getStatusIcon(booth.status)}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            {selectedDay !== 'saturday' && (
-                                <button className={styles.scrollButton} onClick={() => document.getElementById('zoneB1').scrollBy({ left: 200, behavior: 'smooth' })}>›</button>
-                            )}
-                        </div>
-
-                        {/* แถวที่ 2: ครึ่งหลังของ Zone B */}
-                        <div className={styles.boothRow} style={{ marginTop: '12px' }}>
-                            {selectedDay !== 'saturday' && (
-                                <button className={styles.scrollButton} onClick={() => document.getElementById('zoneB2').scrollBy({ left: -200, behavior: 'smooth' })}>‹</button>
-                            )}
-                            <div className={styles.boothScroll} id="zoneB2">
-                                {boothsData.B.slice(Math.ceil(boothsData.B.length / 2)).map(booth => (
-                                    <div
-                                        key={booth.id}
-                                        className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
-                                        style={{
-                                            borderColor: '#f39c12',
-                                            backgroundColor: booth.status === 'available' ? '#fff' :
-                                                booth.status === 'booked' ? '#fadbd8' : '#fef5e7'
-                                        }}
-                                        onClick={() => handleBoothClick(booth)}
-                                    >
-                                        <div className={styles.boothNumber}>{booth.id}</div>
-                                        <div className={styles.boothPrice}>฿{booth.price}</div>
-                                        <div
-                                            className={styles.boothStatus}
-                                            style={{ color: getStatusColor(booth.status) }}
-                                        >
-                                            {getStatusIcon(booth.status)}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            {selectedDay !== 'saturday' && (
-                                <button className={styles.scrollButton} onClick={() => document.getElementById('zoneB2').scrollBy({ left: 200, behavior: 'smooth' })}>›</button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Zone C - 1 แถว */}
-                    <div className={styles.zoneSection} style={selectedDay === 'saturday' ? { width: 'fit-content', display: 'flex', flexDirection: 'column' } : {}}>
-                        <div className={styles.zoneHeader} style={{ backgroundColor: '#3498db', width: '100%' }}>
-                            <span>🚶 ทางเดิน</span>
-                        </div>
-                        <div className={styles.boothRow}>
-                            {selectedDay !== 'saturday' && (
-                                <button className={styles.scrollButton} onClick={() => document.getElementById('zoneC').scrollBy({ left: -200, behavior: 'smooth' })}>‹</button>
-                            )}
-                            <div className={styles.boothScroll} id="zoneC">
-                                {boothsData.C.map(booth => (
-                                    <div
-                                        key={booth.id}
-                                        className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
-                                        style={{
-                                            borderColor: '#3498db',
-                                            backgroundColor: booth.status === 'available' ? '#fff' :
-                                                booth.status === 'booked' ? '#fadbd8' : '#fef5e7'
-                                        }}
-                                        onClick={() => handleBoothClick(booth)}
-                                    >
-                                        <div className={styles.boothNumber}>{booth.id}</div>
-                                        <div className={styles.boothPrice}>฿{booth.price}</div>
-                                        <div
-                                            className={styles.boothStatus}
-                                            style={{ color: getStatusColor(booth.status) }}
-                                        >
-                                            {getStatusIcon(booth.status)}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            {selectedDay !== 'saturday' && (
-                                <button className={styles.scrollButton} onClick={() => document.getElementById('zoneC').scrollBy({ left: 200, behavior: 'smooth' })}>›</button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Legend */}
-                    <div className={styles.legend}>
-                        <div className={styles.legendItem}>
-                            <span className={styles.legendDot} style={{ backgroundColor: '#27ae60' }}></span>
-                            <span>สีเขียว: ว่าง (Available)</span>
-                        </div>
-                        <div className={styles.legendItem}>
-                            <span className={styles.legendDot} style={{ backgroundColor: '#e74c3c' }}></span>
-                            <span>สีแดง: จองแล้ว (Booked)</span>
-                        </div>
-                        <div className={styles.legendItem}>
-                            <span className={styles.legendDot} style={{ backgroundColor: '#f39c12' }}></span>
-                            <span>สีส้ม: รอชำระ (Pending)</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Booking Modal */}
-                {showBookingModal && selectedBooth && (
+                {/* Booking Confirmation Modal */}
+                {showBookingModal && selectedBooths.length > 0 && (
                     <div className={styles.modal} onClick={() => setShowBookingModal(false)}>
                         <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                            <h3>จองบูธ {selectedBooth.id}</h3>
-                            <p>ราคา: ฿{selectedBooth.price}</p>
-                            <p>โซน: {selectedBooth.zone}</p>
+                            <h3>ยืนยันการจอง</h3>
+                            <p>คุณต้องการยืนยันการจองบูธจำนวน {selectedBooths.length} รายการ?</p>
+
+                            <div style={{ maxHeight: '150px', overflowY: 'auto', margin: '16px 0', border: '1px solid #eee', padding: '8px', borderRadius: '8px' }}>
+                                {selectedBooths.map(b => (
+                                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5' }}>
+                                        <span>บูธ {b.id}</span>
+                                        <span>฿{b.price}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px', margin: '16px 0' }}>
+                                <span>ยอดรวมทั้งหมด</span>
+                                <span style={{ color: '#27ae60' }}>฿{getTotalPrice().toLocaleString()}</span>
+                            </div>
+
                             <div className={styles.modalButtons}>
-                                <button className={styles.confirmButton}>ยืนยันการจอง</button>
+                                <button className={styles.confirmButton} onClick={() => alert('ดำเนินการจองเรียบร้อย!')}>ยืนยันการชำระเงิน</button>
                                 <button className={styles.cancelButton} onClick={() => setShowBookingModal(false)}>ยกเลิก</button>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Limit Warning Modal */}
+                {showLimitModal && (
+                    <div className={styles.modal} onClick={() => setShowLimitModal(false)}>
+                        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+                            <h3 style={{ color: '#e74c3c' }}>แจ้งเตือน</h3>
+                            <p style={{ margin: '16px 0', fontSize: '16px' }}>คุณสามารถเลือกจองได้สูงสุด 3 บูธต่อครั้งเท่านั้น</p>
+                            <button
+                                className={styles.confirmButton}
+                                onClick={() => setShowLimitModal(false)}
+                                style={{ width: '100%', marginTop: '8px' }}
+                            >
+                                ตกลง
+                            </button>
                         </div>
                     </div>
                 )}
