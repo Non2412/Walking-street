@@ -523,3 +523,280 @@
     padding: 32px 0;
     font-size: 14px;
 }
+
+/* Modal Improvements */
+.modalContent {
+    background-color: #fff;
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stepContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.stepTitle {
+    font-size: 24px;
+    font-weight: 800;
+    color: #2c3e50;
+    margin: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.stepLayout {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+}
+
+.summarySection {
+    flex: 1;
+    min-width: 280px;
+    background-color: #f8f9fa;
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid #edf2f7;
+    height: fit-content;
+}
+
+.formSection {
+    flex: 1.2;
+    min-width: 300px;
+}
+
+.sectionHeader {
+    margin: 0 0 20px 0;
+    color: #4a5568;
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Input Styles */
+.inputGroup {
+    margin-bottom: 20px;
+}
+
+.inputLabel {
+    display: block;
+    margin-bottom: 8px;
+    color: #4a5568;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.inputField {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    background-color: #fff;
+    color: #2d3748;
+}
+
+.inputField:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.inputField::placeholder {
+    color: #cbd5e0;
+}
+
+/* Payment Methods */
+.paymentMethods {
+    display: flex;
+    gap: 12px;
+}
+
+.paymentButton {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    background-color: #fff;
+    color: #718096;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.paymentButton:hover {
+    border-color: #cbd5e0;
+    background-color: #f7fafc;
+}
+
+.paymentButtonActive {
+    border-color: #667eea;
+    background-color: #ebf4ff;
+    color: #5a67d8;
+    box-shadow: 0 4px 12px rgba(90, 103, 216, 0.15);
+}
+
+/* Summary List in Modal */
+.modalSummaryList {
+    max-height: 250px;
+    overflow-y: auto;
+    margin-bottom: 24px;
+    padding-right: 8px;
+}
+
+.summaryItem {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #e2e8f0;
+    color: #4a5568;
+    font-size: 15px;
+}
+
+.summaryItem:last-child {
+    border-bottom: none;
+}
+
+.summaryTotal {
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
+    font-weight: 800;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 2px solid #e2e8f0;
+    color: #2d3748;
+}
+
+.summaryTotalValue {
+    color: #48bb78;
+}
+
+/* Step 2 Styles */
+.bankCard {
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    margin-top: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.bankCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background-color: #3498db;
+}
+
+.bankHeader {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.bankIcon {
+    width: 48px;
+    height: 48px;
+    background-color: #ebf8ff;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #3182ce;
+}
+
+.accountNumber {
+    font-size: 24px;
+    font-weight: 800;
+    color: #2c3e50;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    font-family: monospace;
+}
+
+.accountName {
+    font-size: 14px;
+    color: #718096;
+}
+
+.uploadBox {
+    width: 100%;
+    height: 300px;
+    border: 2px dashed #cbd5e0;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background-color: #fcfcfc;
+    transition: all 0.3s ease;
+}
+
+.uploadBox:hover {
+    border-color: #667eea;
+    background-color: #f0f4ff;
+    transform: translateY(-2px);
+}
+
+.uploadIcon {
+    font-size: 64px;
+    color: #a0aec0;
+    margin-bottom: 16px;
+    transition: color 0.3s;
+}
+
+.uploadBox:hover .uploadIcon {
+    color: #667eea;
+}
+
+.uploadText {
+    font-size: 18px;
+    font-weight: 700;
+    color: #4a5568;
+    margin-bottom: 8px;
+}
+
+.uploadHint {
+    font-size: 14px;
+    color: #a0aec0;
+}
+
+.uploadError {
+    text-align: center;
+    color: #f56565;
+    font-size: 13px;
+    margin-top: 12px;
+    background-color: #fff5f5;
+    padding: 8px;
+    border-radius: 8px;
+}

@@ -10,6 +10,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import styles from './page.module.css';
+import Script from 'next/script';
 
 function BookingsContent() {
     const { user } = useAuth();
@@ -17,6 +18,78 @@ function BookingsContent() {
     const [selectedBooths, setSelectedBooths] = useState([]);
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [showLimitModal, setShowLimitModal] = useState(false);
+
+    // Booking Flow State
+    const [bookingStep, setBookingStep] = useState(1);
+    const [bookingDetails, setBookingDetails] = useState({
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: ''
+    });
+    const [myBookings, setMyBookings] = useState([]);
+
+    // Update booking details when user loads
+    React.useEffect(() => {
+        if (user) {
+            setBookingDetails(prev => ({
+                ...prev,
+                name: user.name || '',
+                email: user.email || '',
+                phone: user.phone || user.phoneNumber || ''
+            }));
+        }
+    }, [user]);
+
+    const [uploadPreview, setUploadPreview] = useState(null);
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [isVerifyingSlip, setIsVerifyingSlip] = useState(false);
+    const [slipVerificationStatus, setSlipVerificationStatus] = useState(null); // 'success', 'failed', 'error'
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Preview
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setUploadPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+
+            // OCR Verification
+            if (window.Tesseract) {
+                setIsVerifyingSlip(true);
+                setSlipVerificationStatus(null);
+                try {
+                    const result = await window.Tesseract.recognize(
+                        file,
+                        'eng', // English is usually enough for numbers
+                        // { logger: m => console.log(m) }
+                    );
+
+                    const text = result.data.text.replace(/,/g, ''); // Remove commas
+                    const total = getTotalPrice(); // Check against total price
+
+                    // Simple check: Is the total amount string present in the text?
+                    // We check for exact match of the number, or formatted with 2 decimals
+                    const hasTotal = text.includes(total.toString()) || text.includes(total.toFixed(2));
+
+                    if (hasTotal) {
+                        setSlipVerificationStatus('success');
+                    } else {
+                        console.warn('OCR Text:', text);
+                        setSlipVerificationStatus('failed');
+                    }
+                } catch (error) {
+                    console.error('OCR Error:', error);
+                    setSlipVerificationStatus('error');
+                } finally {
+                    setIsVerifyingSlip(false);
+                }
+            } else {
+                console.warn('Tesseract not loaded yet');
+            }
+        }
+    };
 
     // สร้างข้อมูลบูธตามวันที่เลือก (ใช้ useMemo เพื่อไม่ให้สุ่มใหม่ทุกครั้ง)
     const boothsData = React.useMemo(() => {
@@ -35,12 +108,17 @@ function BookingsContent() {
         for (let i = 1; i <= counts.A; i++) {
             const id = `A-${String(i).padStart(2, '0')}`;
             const rand = (i * 7) % 10; // ใช้ pattern แทน random
+
+            // Check if booked by current user
+            const isMyBooking = myBookings.includes(id);
+
             booths.A.push({
                 id,
                 zone: 'A',
                 price: 500,
-                status: rand > 7 ? (rand > 8 ? 'booked' : 'pending') : 'available',
+                status: isMyBooking ? 'pending' : (rand > 7 ? (rand > 8 ? 'booked' : 'pending') : 'available'),
                 bookedBy: rand > 5 ? 'ร้านตัวอย่าง' : null,
+                isMyBooking
             });
         }
 
@@ -48,12 +126,15 @@ function BookingsContent() {
         for (let i = 1; i <= counts.B; i++) {
             const id = `B-${String(i).padStart(2, '0')}`;
             const rand = (i * 11) % 10;
+            const isMyBooking = myBookings.includes(id);
+
             booths.B.push({
                 id,
                 zone: 'B',
                 price: 700,
-                status: rand > 7 ? (rand > 8 ? 'booked' : 'pending') : 'available',
+                status: isMyBooking ? 'pending' : (rand > 7 ? (rand > 8 ? 'booked' : 'pending') : 'available'),
                 bookedBy: rand > 5 ? 'ร้านตัวอย่าง' : null,
+                isMyBooking
             });
         }
 
@@ -61,17 +142,20 @@ function BookingsContent() {
         for (let i = 1; i <= counts.C; i++) {
             const id = `C-${String(i).padStart(2, '0')}`;
             const rand = (i * 13) % 10;
+            const isMyBooking = myBookings.includes(id);
+
             booths.C.push({
                 id,
                 zone: 'C',
                 price: 1000,
-                status: rand > 7 ? (rand > 8 ? 'booked' : 'pending') : 'available',
+                status: isMyBooking ? 'pending' : (rand > 7 ? (rand > 8 ? 'booked' : 'pending') : 'available'),
                 bookedBy: rand > 5 ? 'ร้านตัวอย่าง' : null,
+                isMyBooking
             });
         }
 
         return booths;
-    }, [selectedDay]);
+    }, [selectedDay, myBookings]);
 
     const allBooths = [...boothsData.A, ...boothsData.B, ...boothsData.C];
 
@@ -127,7 +211,7 @@ function BookingsContent() {
     };
 
     return (
-        <div className={styles.pageContainer}>
+        <div className={styles.pageContainer} >
             <Navbar />
 
             <div className={styles.container}>
@@ -433,7 +517,10 @@ function BookingsContent() {
                                 className={styles.confirmButton}
                                 disabled={selectedBooths.length === 0}
                                 style={{ width: '100%', opacity: selectedBooths.length === 0 ? 0.5 : 1, cursor: selectedBooths.length === 0 ? 'not-allowed' : 'pointer' }}
-                                onClick={() => setShowBookingModal(true)}
+                                onClick={() => {
+                                    setBookingStep(1);
+                                    setShowBookingModal(true);
+                                }}
                             >
                                 ยืนยันการจอง
                             </button>
@@ -441,31 +528,254 @@ function BookingsContent() {
                     </div>
                 </div>
 
-                {/* Booking Confirmation Modal */}
+                {/* Booking Process Modal */}
                 {showBookingModal && selectedBooths.length > 0 && (
                     <div className={styles.modal} onClick={() => setShowBookingModal(false)}>
-                        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                            <h3>ยืนยันการจอง</h3>
-                            <p>คุณต้องการยืนยันการจองบูธจำนวน {selectedBooths.length} รายการ?</p>
+                        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '95%' }}>
+                            {bookingStep === 1 ? (
+                                /* Step 1: User Details */
+                                <div className={styles.stepContainer}>
+                                    <h3 className={styles.stepTitle}>ยืนยันการจอง</h3>
 
-                            <div style={{ maxHeight: '150px', overflowY: 'auto', margin: '16px 0', border: '1px solid #eee', padding: '8px', borderRadius: '8px' }}>
-                                {selectedBooths.map(b => (
-                                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #f5f5f5' }}>
-                                        <span>บูธ {b.id}</span>
-                                        <span>฿{b.price}</span>
+                                    <div className={styles.stepLayout}>
+                                        {/* Left: Summary */}
+                                        <div className={styles.summarySection}>
+                                            <div className={styles.sectionHeader}>
+                                                <span>📋</span> สรุปรายการ
+                                            </div>
+
+                                            <div className={styles.modalSummaryList}>
+                                                {selectedBooths.map(b => (
+                                                    <div key={b.id} className={styles.summaryItem}>
+                                                        <span>บูธ {b.id} ({b.zone})</span>
+                                                        <span>฿{b.price}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className={styles.summaryTotal}>
+                                                <span>รวมทั้งสิ้น</span>
+                                                <span className={styles.summaryTotalValue}>฿{getTotalPrice().toLocaleString()}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Right: Form */}
+                                        <div className={styles.formSection}>
+                                            <div className={styles.sectionHeader}>
+                                                <span>👤</span> ข้อมูลผู้จอง
+                                            </div>
+
+                                            <div className={styles.inputGroup}>
+                                                <label className={styles.inputLabel}>ชื่อ-นามสกุล</label>
+                                                <input
+                                                    type="text"
+                                                    value={bookingDetails.name}
+                                                    onChange={(e) => setBookingDetails({ ...bookingDetails, name: e.target.value })}
+                                                    className={styles.inputField}
+                                                    placeholder="กรอกชื่อ-นามสกุล"
+                                                />
+                                            </div>
+
+                                            <div className={styles.inputGroup}>
+                                                <label className={styles.inputLabel}>อีเมล</label>
+                                                <input
+                                                    type="email"
+                                                    value={bookingDetails.email}
+                                                    onChange={(e) => setBookingDetails({ ...bookingDetails, email: e.target.value })}
+                                                    className={styles.inputField}
+                                                    placeholder="กรอกอีเมล"
+                                                />
+                                            </div>
+
+                                            <div className={styles.inputGroup}>
+                                                <label className={styles.inputLabel}>เบอร์โทรศัพท์</label>
+                                                <input
+                                                    type="tel"
+                                                    value={bookingDetails.phone}
+                                                    onChange={(e) => setBookingDetails({ ...bookingDetails, phone: e.target.value })}
+                                                    className={styles.inputField}
+                                                    placeholder="กรอกเบอร์โทรศัพท์"
+                                                />
+                                            </div>
+
+                                            <div className={styles.inputGroup}>
+                                                <label className={styles.inputLabel}>วิธีการชำระเงิน</label>
+                                                <div className={styles.paymentMethods}>
+                                                    <button className={`${styles.paymentButton} ${styles.paymentButtonActive}`}>
+                                                        PromptPay
+                                                    </button>
+                                                    <button className={styles.paymentButton} style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                                                        Credit Card
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className={styles.modalButtons} style={{ marginTop: 'auto' }}>
+                                                <button className={styles.cancelButton} onClick={() => setShowBookingModal(false)}>ยกเลิก</button>
+                                                <button
+                                                    className={styles.confirmButton}
+                                                    onClick={() => setBookingStep(2)}
+                                                    style={{ opacity: (!bookingDetails.name || !bookingDetails.phone) ? 0.5 : 1 }}
+                                                    disabled={!bookingDetails.name || !bookingDetails.phone}
+                                                >
+                                                    ดำเนินการต่อ
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            ) : (
+                                /* Step 2: Payment & Upload */
+                                <div className={styles.stepContainer}>
+                                    <h3 className={styles.stepTitle}>การชำระเงิน</h3>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px', margin: '16px 0' }}>
-                                <span>ยอดรวมทั้งหมด</span>
-                                <span style={{ color: '#27ae60' }}>฿{getTotalPrice().toLocaleString()}</span>
-                            </div>
+                                    <div className={styles.stepLayout}>
+                                        {/* Left: Summary */}
+                                        <div className={styles.summarySection}>
+                                            <div className={styles.sectionHeader}>
+                                                <span>💰</span> รายละเอียดการชำระ
+                                            </div>
 
-                            <div className={styles.modalButtons}>
-                                <button className={styles.confirmButton} onClick={() => alert('ดำเนินการจองเรียบร้อย!')}>ยืนยันการชำระเงิน</button>
-                                <button className={styles.cancelButton} onClick={() => setShowBookingModal(false)}>ยกเลิก</button>
-                            </div>
+                                            <div style={{ marginBottom: '24px' }}>
+                                                <div className={styles.summaryItem}>
+                                                    <span>จำนวนบูธที่จอง</span>
+                                                    <span style={{ fontWeight: 'bold' }}>{selectedBooths.length} บูธ</span>
+                                                </div>
+                                                <div className={styles.summaryTotal}>
+                                                    <span>ยอดชำระเงิน</span>
+                                                    <span className={styles.summaryTotalValue}>฿{getTotalPrice().toLocaleString()}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Bank Details Card */}
+                                            <div className={styles.bankCard}>
+                                                <div style={{ textAlign: 'center', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #f0f0f0' }}>
+                                                    <img
+                                                        src="/img/promptpay.png"
+                                                        alt="PromptPay QR Code"
+                                                        style={{ width: '100%', maxWidth: '220px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                                                    />
+                                                    <div style={{ marginTop: '8px', color: '#666', fontSize: '14px' }}>สแกนเพื่อชำระเงิน</div>
+                                                </div>
+                                                <div className={styles.bankHeader}>
+                                                    <div className={styles.bankIcon}>🏦</div>
+                                                    <div>
+                                                        <div style={{ fontWeight: 'bold', color: '#2c3e50' }}>ธนาคารกรุงไทย</div>
+                                                        <div style={{ fontSize: '13px', color: '#7f8c8d' }}>Walking Street Market</div>
+                                                    </div>
+                                                </div>
+                                                <div className={styles.accountNumber}>115-x-xxxxx-x</div>
+                                                <div className={styles.accountName}>ชื่อบัญชี: แพลนเน็ท เทศวินทร์</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Right: Upload Slip */}
+                                        <div className={styles.formSection} style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <div className={styles.sectionHeader}>
+                                                <span>🧾</span> หลักฐานการโอน
+                                            </div>
+
+                                            <div style={{ marginBottom: '16px' }}>
+                                                <label className={styles.inputLabel} style={{ marginBottom: '8px', display: 'block' }}>ระบุจำนวนเงินที่โอน</label>
+                                                <input
+                                                    type="number"
+                                                    value={paymentAmount}
+                                                    onChange={(e) => setPaymentAmount(e.target.value)}
+                                                    className={styles.inputField}
+                                                    placeholder="0.00"
+                                                    style={{ width: '100%' }}
+                                                />
+                                            </div>
+
+
+                                            <label className={styles.uploadBox}>
+                                                <input
+                                                    type="file"
+                                                    style={{ display: 'none' }}
+                                                    accept="image/*"
+                                                    onChange={handleFileChange}
+                                                />
+                                                {uploadPreview ? (
+                                                    <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                                                        <img
+                                                            src={uploadPreview}
+                                                            alt="Slip Preview"
+                                                            style={{ maxWidth: '100%', maxHeight: '160px', borderRadius: '8px', objectFit: 'contain' }}
+                                                        />
+
+                                                        {isVerifyingSlip && (
+                                                            <div style={{ marginTop: '8px', color: '#f39c12' }}>⏳ กำลังตรวจสอบสลิป...</div>
+                                                        )}
+
+                                                        {!isVerifyingSlip && slipVerificationStatus === 'success' && (
+                                                            <div style={{ marginTop: '8px', color: '#2ecc71', fontWeight: 'bold' }}>✅ พบยอดเงินถูกต้อง</div>
+                                                        )}
+
+                                                        {!isVerifyingSlip && slipVerificationStatus === 'failed' && (
+                                                            <div style={{ marginTop: '8px', color: '#e74c3c' }}>⚠️ ไม่พบยอดเงินที่ตรงกัน (กรุณาตรวจสอบ)</div>
+                                                        )}
+
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            bottom: '10px',
+                                                            background: 'rgba(0,0,0,0.6)',
+                                                            color: 'white',
+                                                            padding: '4px 12px',
+                                                            borderRadius: '20px',
+                                                            fontSize: '12px'
+                                                        }}>
+                                                            คลิกเพื่อเปลี่ยนรูป
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className={styles.uploadIcon}>☁️</div>
+                                                        <div className={styles.uploadText}>อัปโหลดสลิปโอนเงิน</div>
+                                                        <div className={styles.uploadHint}>คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</div>
+                                                    </>
+                                                )}
+                                            </label>
+
+                                            <div className={styles.modalButtons} style={{ marginTop: '24px' }}>
+                                                <button className={styles.cancelButton} onClick={() => setBookingStep(1)}>ย้อนกลับ</button>
+                                                <button
+                                                    className={styles.confirmButton}
+                                                    onClick={() => {
+                                                        const total = getTotalPrice();
+                                                        if (parseFloat(paymentAmount) !== total) {
+                                                            alert(`ยอดเงินไม่ถูกต้อง กรุณาระบุจำนวนเงินให้ตรงกับยอดชำระ (${total.toLocaleString()} บาท)`);
+                                                            return;
+                                                        }
+
+                                                        if (!uploadPreview) {
+                                                            alert('กรุณาแนบหลักฐานการโอนเงิน');
+                                                            return;
+                                                        }
+
+                                                        if (slipVerificationStatus === 'failed') {
+                                                            const confirm = window.confirm('ระบบไม่พบยอดเงินที่ตรงกันในสลิป คุณยืนยันที่จะส่งข้อมูลหรือไม่?');
+                                                            if (!confirm) return;
+                                                        }
+
+                                                        // Add to my bookings
+                                                        const newBookings = selectedBooths.map(b => b.id);
+                                                        setMyBookings(prev => [...prev, ...newBookings]);
+
+                                                        // Clear state
+                                                        setUploadPreview(null);
+                                                        setPaymentAmount('');
+                                                        alert('จองสำเร็จ! กรุณารอการตรวจสอบ');
+                                                        setShowBookingModal(false);
+                                                        setSelectedBooths([]);
+                                                    }}
+                                                >
+                                                    แจ้งชำระเงิน
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -488,7 +798,9 @@ function BookingsContent() {
                     </div>
                 )}
             </div>
-        </div>
+            {/* Load Tesseract.js from CDN */}
+            <Script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" strategy="lazyOnload" />
+        </div >
     );
 }
 
