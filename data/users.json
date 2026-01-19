@@ -31,5 +31,16 @@
     "phone": "0945103675",
     "role": "user",
     "createdAt": "2026-01-11T15:04:45.107Z"
+  },
+  {
+    "id": "4",
+    "email": "123456789@gmail.com",
+    "password": "123456",
+    "name": "sittirat gamethai",
+    "shopName": "awdd",
+    "shopDescription": "ขนม",
+    "phone": "0945103675",
+    "role": "user",
+    "createdAt": "2026-01-19T06:41:51.341Z"
   }
 ]

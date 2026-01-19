@@ -7,6 +7,7 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Script from 'next/script'; // Import Script for CDN loading
 
 const AuthContext = createContext();
 
