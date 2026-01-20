@@ -5,10 +5,16 @@
 
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-// DB Files - EXPORTED
-export const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
-export const BOOKINGS_FILE = path.join(process.cwd(), 'data', 'bookings.json');
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// DB Files - EXPORTED (using absolute path from project root)
+const PROJECT_ROOT = path.join(__dirname, '..', '..');
+export const USERS_FILE = path.join(PROJECT_ROOT, 'data', 'users.json');
+export const BOOKINGS_FILE = path.join(PROJECT_ROOT, 'data', 'bookings.json');
 
 // Default users
 const DEFAULT_USERS = [
@@ -151,7 +157,7 @@ export function resetDatabase() {
 
 // สร้าง directory ถ้ายังไม่มี
 function ensureDataDir() {
-    const dataDir = path.join(process.cwd(), 'data');
+    const dataDir = path.join(PROJECT_ROOT, 'data');
     if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
     }

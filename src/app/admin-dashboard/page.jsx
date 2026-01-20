@@ -21,6 +21,10 @@ function DashboardContent() {
             type: 'food',
             status: '🏷️ รออนุมัติ',
             statusColor: '#f39c12',
+            slipImage: 'https://via.placeholder.com/400x300?text=Transfer+Slip+1',
+            transferDate: '2026-01-20',
+            transferAmount: '5,000',
+            transferFrom: 'สมชาย โชค',
             actions: ['👁️ ดู', '✅ อนุมัติ', '❌ ปฏิเสธ', '🗑️ ลบ']
         },
         {
@@ -31,6 +35,10 @@ function DashboardContent() {
             type: 'clothing',
             status: '✅ อนุมัติแล้ว',
             statusColor: '#27ae60',
+            slipImage: 'https://via.placeholder.com/400x300?text=Transfer+Slip+2',
+            transferDate: '2026-01-19',
+            transferAmount: '3,500',
+            transferFrom: 'สรัย สรนโร',
             actions: ['👁️ ดู', '❌ ปฏิเสธ', '🗑️ ลบ']
         },
         {
@@ -41,6 +49,10 @@ function DashboardContent() {
             type: 'food',
             status: '❌ ปฏิเสธแล้ว',
             statusColor: '#e74c3c',
+            slipImage: 'https://via.placeholder.com/400x300?text=Transfer+Slip+3',
+            transferDate: '2026-01-18',
+            transferAmount: '2,500',
+            transferFrom: 'คำ รศสราง',
             actions: ['👁️ ดู', '✅ อนุมัติ', '🗑️ ลบ']
         },
         {
@@ -51,6 +63,10 @@ function DashboardContent() {
             type: 'accessories',
             status: '🏷️ รออนุมัติ',
             statusColor: '#f39c12',
+            slipImage: 'https://via.placeholder.com/400x300?text=Transfer+Slip+4',
+            transferDate: '2026-01-20',
+            transferAmount: '4,000',
+            transferFrom: 'มณีชา วรรณ',
             actions: ['👁️ ดู', '✅ อนุมัติ', '❌ ปฏิเสธ', '🗑️ ลบ']
         }
     ]);
@@ -268,7 +284,44 @@ function DashboardContent() {
                             {/* Divider */}
                             <div className={styles.divider}></div>
 
-                            {/* Status */}
+                            {/* Transfer Slip Image */}
+                            <div className={styles.transferSlipSection}>
+                                <h3 className={styles.sectionTitle}>📷 สลิปการโอนเงิน</h3>
+                                {selectedBooking.slipImage ? (
+                                    <div className={styles.slipImageContainer}>
+                                        <img 
+                                            src={selectedBooking.slipImage} 
+                                            alt="Transfer Slip" 
+                                            className={styles.slipImage}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className={styles.noSlip}>
+                                        <p>ไม่พบสลิปการโอน</p>
+                                    </div>
+                                )}
+                                
+                                {/* Transfer Details */}
+                                <div className={styles.transferDetails}>
+                                    <div className={styles.detailRow}>
+                                        <span className={styles.label}>วันที่โอน:</span>
+                                        <span className={styles.value}>{selectedBooking.transferDate}</span>
+                                    </div>
+                                    <div className={styles.detailRow}>
+                                        <span className={styles.label}>จำนวนเงิน:</span>
+                                        <span className={styles.value} style={{color: '#27ae60', fontWeight: 'bold'}}>
+                                            ฿ {selectedBooking.transferAmount}
+                                        </span>
+                                    </div>
+                                    <div className={styles.detailRow}>
+                                        <span className={styles.label}>โอนจาก:</span>
+                                        <span className={styles.value}>{selectedBooking.transferFrom}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Divider */}
+                            <div className={styles.divider}></div>
                             <div className={styles.statusSection}>
                                 <span className={styles.label}>สถานะ:</span>
                                 <span
