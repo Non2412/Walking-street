@@ -1,19 +1,24 @@
 /**
- * Register API Route - Using Shared Database
- * POST /api/auth/register
+ * Register API Route - Using MongoDB
+ * POST /api/auth/signup
  */
 
 import { NextResponse } from 'next/server';
-import { findUserByEmail, addUser, getAllUsers } from '@/lib/mockDb';
+import dbConnect from '@/lib/mongodb';
+import User from '@/models/User';
 
 export async function POST(request) {
     try {
-        const { name, shopName, shopDescription, phone, email, password, confirmPassword } = await request.json();
+        await dbConnect();
+        
+        const { name, email, password, confirmPassword, fullName, username } = await request.json();
+
+        console.log('📝 Register attempt:', { email, name });
 
         // Validation
-        if (!name || !shopName || !shopDescription || !phone || !email || !password || !confirmPassword) {
+        if (!email || !password) {
             return NextResponse.json(
-                { success: false, error: 'กรุณากรอกข้อมูลให้ครบถ้วน' },
+                { success: false, error: 'กรุณากรอกอีเมลและรหัสผ่าน' },
                 { status: 400 }
             );
         }
@@ -33,7 +38,7 @@ export async function POST(request) {
         }
 
         // ตรวจสอบว่าอีเมลซ้ำหรือไม่
-        const existingUser = findUserByEmail(email);
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
             return NextResponse.json(
                 { success: false, error: 'อีเมลนี้ถูกใช้งานแล้ว' },
@@ -42,32 +47,24 @@ export async function POST(request) {
         }
 
         // สร้าง user ใหม่
-        const allUsers = getAllUsers();
-        const newUser = {
-            id: String(allUsers.length + 1),
+        const newUser = new User({
             email: email.toLowerCase(),
             password,
-            name,
-            shopName,
-            shopDescription,
-            phone,
+            name: name || fullName || username,
+            fullName: fullName || name,
+            username: username || email.split('@')[0],
             role: 'user',
-            createdAt: new Date().toISOString(),
-        };
+        });
 
-        addUser(newUser);
-
-        // สร้าง token
-        const token = Buffer.from(`${newUser.id}:${Date.now()}`).toString('base64');
+        await newUser.save();
+        console.log('✅ User registered:', { email });
 
         // ส่งข้อมูล user กลับ (ไม่ส่ง password)
-        // eslint-disable-next-line no-unused-vars
-        const { password: userPassword, ...userWithoutPassword } = newUser;
+        const userResponse = newUser.toJSON();
 
         return NextResponse.json({
             success: true,
-            user: userWithoutPassword,
-            token: token,
+            user: userResponse,
             message: 'สมัครสมาชิกสำเร็จ',
         }, { status: 201 });
 

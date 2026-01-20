@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 
 const MarketAuthContext = createContext();
 
-// ใช้ local API endpoint แทน market-api เพื่อหลีกเลี่ยง CORS issues
-const API_BASE_URL = '/api';
+// ใช้ Vercel API แทน Local API
+const API_BASE_URL = 'https://market-api-mu.vercel.app/api';
 
 export function MarketAuthProvider({ children }) {
     const [user, setUser] = useState(null);
@@ -32,10 +32,10 @@ export function MarketAuthProvider({ children }) {
         setLoading(false);
     }, []);
 
-    // User Signup
+    // User Signup (ใช้ Local API ชั่วคราว)
     const signup = async (username, email, password, fullName) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+            const response = await fetch(`/api/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password, fullName }),
@@ -60,10 +60,10 @@ export function MarketAuthProvider({ children }) {
         }
     };
 
-    // User Login
+    // User Login (ใช้ Local API ชั่วคราว)
     const login = async (email, password) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/user-login`, {
+            const response = await fetch(`/api/auth/user-login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -91,7 +91,7 @@ export function MarketAuthProvider({ children }) {
     // Admin Login
     const adminLogin = async (email, password) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),

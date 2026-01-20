@@ -1,10 +1,10 @@
 
 import { NextResponse } from 'next/server';
-import { getSettings, saveSettings } from '@/lib/mockDb';
 
 export async function GET() {
     try {
-        const settings = getSettings();
+        // Return default settings
+        const settings = { openDates: [], notifications: true };
         return NextResponse.json({ success: true, data: settings });
     } catch (error) {
         return NextResponse.json(
@@ -19,14 +19,13 @@ export async function POST(request) {
         const body = await request.json();
         const { openDates } = body;
 
-        const currentSettings = getSettings();
+        // Save settings (in production, save to MongoDB)
         const newSettings = {
-            ...currentSettings,
-            openDates: openDates || currentSettings.openDates
+            openDates: openDates || [],
+            notifications: true
         };
 
-        const saved = saveSettings(newSettings);
-        return NextResponse.json({ success: true, data: saved });
+        return NextResponse.json({ success: true, data: newSettings });
     } catch (error) {
         return NextResponse.json(
             { success: false, error: 'Failed to save settings' },

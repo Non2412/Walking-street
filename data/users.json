@@ -31,5 +31,49 @@
     "phone": "0123456789",
     "role": "user",
     "createdAt": "2026-01-20T16:17:10.326Z"
+  },
+  {
+    "id": "4",
+    "email": "stu6612732130@sskru.ac.th",
+    "password": "123456",
+    "name": "ฟกหหฟ",
+    "shopName": "ฟฟ",
+    "shopDescription": "ขายของ",
+    "phone": "0999123526",
+    "role": "user",
+    "createdAt": "2026-01-20T18:04:13.764Z"
+  },
+  {
+    "id": "5",
+    "email": "test@example.com",
+    "password": "password123",
+    "name": "ฟกหหฟ",
+    "shopName": "ฟฟ",
+    "shopDescription": "ขายของ",
+    "phone": "0999123526",
+    "role": "user",
+    "createdAt": "2026-01-20T18:32:03.478Z"
+  },
+  {
+    "id": "6",
+    "email": "test2@example.com",
+    "password": "123456",
+    "name": "testuser",
+    "shopName": "2",
+    "shopDescription": "ขายของ",
+    "phone": "0999123526",
+    "role": "user",
+    "createdAt": "2026-01-20T18:36:55.514Z"
+  },
+  {
+    "id": "7",
+    "email": "test3@example.com",
+    "password": "123456",
+    "name": "testuser",
+    "shopName": "3",
+    "shopDescription": "ขายของ",
+    "phone": "0999123526",
+    "role": "user",
+    "createdAt": "2026-01-20T19:10:20.249Z"
   }
 ]

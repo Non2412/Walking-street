@@ -1,13 +1,17 @@
 /**
  * User Login API Route
  * POST /api/auth/user-login
- * Proxies to market-api to avoid CORS issues
  */
 
 import { NextResponse } from 'next/server';
+import dbConnect from '@/lib/mongodb';
+import User from '@/models/User';
+import jwt from 'jsonwebtoken';
 
 export async function POST(request) {
     try {
+        await dbConnect();
+        
         const { email, password } = await request.json();
 
         // Validation
@@ -20,28 +24,43 @@ export async function POST(request) {
 
         console.log('🔐 User login attempt:', { email });
 
-        // Proxy to market-api
-        const response = await fetch('https://market-api-mu.vercel.app/api/auth/user-login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
+        // Find user in MongoDB
+        const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            console.error('❌ Market API error:', data);
+        if (!user) {
+            console.error('❌ User not found:', email);
             return NextResponse.json(
-                { success: false, error: data.error || 'เข้าสู่ระบบไม่สำเร็จ' },
-                { status: response.status }
+                { success: false, error: 'ไม่พบบัญชีผู้ใช้นี้' },
+                { status: 401 }
             );
         }
 
-        console.log('✅ User login successful:', data);
+        // Compare passwords
+        const isPasswordValid = await user.comparePassword(password);
+
+        if (!isPasswordValid) {
+            console.error('❌ Invalid password for:', email);
+            return NextResponse.json(
+                { success: false, error: 'รหัสผ่านไม่ถูกต้อง' },
+                { status: 401 }
+            );
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { userId: user._id, email: user.email, role: user.role },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '7d' }
+        );
+
+        console.log('✅ User login successful:', { email });
+
+        const userResponse = user.toJSON();
 
         return NextResponse.json({
             success: true,
-            data: data.data,
+            user: userResponse,
+            token: token,
         });
 
     } catch (error) {

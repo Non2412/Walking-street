@@ -6,35 +6,48 @@ import BookingDetail from './BookingDetail';
 import styles from './admin-dashboard.module.css';
 
 export default function AdminDashboard() {
-    const { token } = useMarketAuth();
+    const { token, loading: authLoading } = useMarketAuth();
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState('');
     const [selectedBooking, setSelectedBooking] = useState(null);
 
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://market-api-n9paign16-suppchai0-projects.vercel.app';
-
     useEffect(() => {
-        fetchBookings();
-    }, []);
+        // รอให้ auth context โหลด token จาก localStorage
+        if (!authLoading && token) {
+            console.log('✅ Auth ready, fetching bookings...');
+            fetchBookings();
+        } else if (!authLoading && !token) {
+            console.warn('⚠️ No token available');
+            setLoading(false);
+        }
+    }, [token, authLoading]);
 
     const fetchBookings = async () => {
+        if (!token) {
+            console.warn('⚠️ Token not available');
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         try {
-            console.log('🔄 Fetching bookings from:', API_BASE_URL);
-            console.log('📌 Token available:', !!token);
+            console.log('🔄 Fetching bookings from local proxy');
+            console.log('📌 Token:', token.substring(0, 20) + '...');
             
-            const response = await fetch(`${API_BASE_URL}/api/bookings`, {
+            const response = await fetch('/api/bookings', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` }),
+                    'Authorization': `Bearer ${token}`,
                 },
             });
 
             console.log('📊 Response status:', response.status);
 
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Error response:', errorText);
                 throw new Error(`API Error: ${response.status} ${response.statusText}`);
             }
 
@@ -61,25 +74,25 @@ export default function AdminDashboard() {
     // Stats
     const stats = [
         {
-            label: 'Total Bookings',
+            label: 'รวมการจอง',
             value: bookings.length,
             icon: '📋',
             color: '#3498db',
         },
         {
-            label: 'Pending',
+            label: 'รอการอนุมัติ',
             value: bookings.filter(b => b.status === 'pending').length,
             icon: '⏳',
             color: '#f39c12',
         },
         {
-            label: 'Approved',
+            label: 'อนุมัติแล้ว',
             value: bookings.filter(b => b.status === 'approved').length,
             icon: '✅',
             color: '#27ae60',
         },
         {
-            label: 'Rejected',
+            label: 'ปฏิเสธ',
             value: bookings.filter(b => b.status === 'rejected').length,
             icon: '❌',
             color: '#e74c3c',
@@ -102,28 +115,85 @@ export default function AdminDashboard() {
     };
 
     if (loading) {
-        return <div className={styles.loading}>Loading admin dashboard...</div>;
+        return (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
+                <p>กำลังโหลดแดชบอร์ดผู้ดูแลระบบ...</p>
+            </div>
+        );
     }
 
     return (
-        <div className={styles.container}>
-            <div className={styles.header}>
-                <h1>Admin Dashboard</h1>
-                <button className={styles.refreshBtn} onClick={fetchBookings}>
-                    🔄 Refresh
+        <div style={{ 
+            width: '100%',
+            padding: '20px',
+            background: '#f5f7fa',
+            minHeight: '100vh'
+        }}>
+            {/* Header */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '30px'
+            }}>
+                <h1 style={{ margin: 0, fontSize: '28px', fontWeight: '800', color: '#333' }}>
+                    📊 แดชบอร์ดผู้ดูแลระบบ
+                </h1>
+                <button 
+                    onClick={fetchBookings}
+                    style={{
+                        padding: '10px 20px',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '14px'
+                    }}
+                >
+                    🔄 รีเฟรช
                 </button>
             </div>
 
             {/* Stats Cards */}
-            <div className={styles.statsGrid}>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '20px',
+                marginBottom: '30px'
+            }}>
                 {stats.map((stat, idx) => (
-                    <div key={idx} className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ color: stat.color }}>
+                    <div 
+                        key={idx} 
+                        style={{
+                            background: 'white',
+                            padding: '20px',
+                            borderRadius: '12px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '15px'
+                        }}
+                    >
+                        <div style={{
+                            fontSize: '36px',
+                            width: '60px',
+                            height: '60px',
+                            background: `${stat.color}20`,
+                            borderRadius: '10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
                             {stat.icon}
                         </div>
-                        <div className={styles.statContent}>
-                            <p className={styles.statLabel}>{stat.label}</p>
-                            <p className={styles.statValue} style={{ color: stat.color }}>
+                        <div>
+                            <p style={{ margin: '0 0 5px 0', color: '#999', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>
+                                {stat.label}
+                            </p>
+                            <p style={{ margin: 0, fontSize: '28px', fontWeight: '800', color: stat.color }}>
                                 {stat.value}
                             </p>
                         </div>
@@ -132,16 +202,22 @@ export default function AdminDashboard() {
             </div>
 
             {/* Filters */}
-            <div className={styles.filterSection}>
+            <div style={{
+                background: 'white',
+                padding: '15px',
+                borderRadius: '12px',
+                marginBottom: '20px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+            }}>
                 <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
                     className={styles.filterSelect}
                 >
-                    <option value="">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
+                    <option value="">สถานะทั้งหมด</option>
+                    <option value="pending">รอการอนุมัติ</option>
+                    <option value="approved">อนุมัติแล้ว</option>
+                    <option value="rejected">ปฏิเสธ</option>
                 </select>
             </div>
 
@@ -149,20 +225,20 @@ export default function AdminDashboard() {
             <div className={styles.tableSection}>
                 {filteredBookings.length === 0 ? (
                     <div className={styles.empty}>
-                        <p>No bookings found</p>
+                        <p>ไม่พบการจอง</p>
                     </div>
                 ) : (
                     <div className={styles.tableWrapper}>
                         <table className={styles.table}>
                             <thead>
                                 <tr>
-                                    <th>Store Name</th>
-                                    <th>Owner</th>
-                                    <th>Phone</th>
-                                    <th>Shop Type</th>
-                                    <th>Stall</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
+                                    <th>ชื่อร้าน</th>
+                                    <th>เจ้าของ</th>
+                                    <th>เบอร์โทร</th>
+                                    <th>ประเภท</th>
+                                    <th>หมายเลขสถาน</th>
+                                    <th>สถานะ</th>
+                                    <th>การกระทำ</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -189,7 +265,7 @@ export default function AdminDashboard() {
                                                 className={styles.viewBtn}
                                                 onClick={() => setSelectedBooking(booking._id)}
                                             >
-                                                👁️ View
+                                                👁️ ดู
                                             </button>
                                         </td>
                                     </tr>

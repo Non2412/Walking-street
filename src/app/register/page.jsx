@@ -7,11 +7,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function RegisterPage() {
     const router = useRouter();
-    const { register } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
         shopName: '',
@@ -93,15 +91,30 @@ export default function RegisterPage() {
         setIsLoading(true);
 
         try {
-            const result = await register(formData);
+            // Send to local signup API
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password,
+                    confirmPassword: formData.confirmPassword,
+                    fullName: formData.name,
+                    username: formData.email.split('@')[0],
+                }),
+            });
 
-            if (result.success) {
+            const data = await response.json();
+
+            if (data.success) {
                 // Redirect to login page after successful registration
                 router.push('/login');
             } else {
-                setErrors({ submit: result.error || 'การสมัครสมาชิกล้มเหลว' });
+                setErrors({ submit: data.error || 'การสมัครสมาชิกล้มเหลว' });
             }
         } catch (error) {
+            console.error('Registration error:', error);
             setErrors({ submit: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
         } finally {
             setIsLoading(false);
@@ -458,7 +471,7 @@ const styles = {
         color: '#2c3e50',
     },
     inputError: {
-        borderColor: '#e74c3c',
+        border: '2px solid #e74c3c',
     },
     passwordWrapper: {
         position: 'relative',
