@@ -23,8 +23,20 @@ export function AuthProvider({ children }) {
                 const savedUser = localStorage.getItem('user');
                 const token = localStorage.getItem('token');
 
-                if (savedUser && savedUser !== 'undefined' && token) {
-                    setUser(JSON.parse(savedUser));
+                if (savedUser && token && savedUser !== 'undefined' && savedUser !== 'null') {
+                    try {
+                        const parsedUser = JSON.parse(savedUser);
+                        if (parsedUser) {
+                            setUser(parsedUser);
+                        }
+                    } catch (e) {
+                        console.error('Invalid JSON in localStorage, clearing...', e);
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('token');
+                    }
+                } else if (savedUser === 'undefined' || savedUser === 'null') {
+                    // Clean up bad data
+                    localStorage.removeItem('user');
                 }
             } catch (error) {
                 console.error('Error loading user:', error);
@@ -49,18 +61,23 @@ export function AuthProvider({ children }) {
                 body: JSON.stringify({ email, password }),
             });
 
-            const data = await response.json();
+            const resData = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Login failed');
+                throw new Error(resData.error || 'Login failed');
             }
 
-            console.log('✅ Login successful');
+            console.log('✅ Login successful', resData);
+
+            // API sends { success: true, data: { user: ..., token: ... } }
+            // Must access .data property correctly
+            const { user, token } = resData.data || resData; // Support both structures just in case
+
+            if (!user || !token) {
+                throw new Error('Invalid response from server');
+            }
 
             // บันทึก user และ token
-            const user = data.data?.user;
-            const token = data.data?.token;
-            
             setUser(user);
             localStorage.setItem('user', JSON.stringify(user));
             localStorage.setItem('token', token);
@@ -83,20 +100,24 @@ export function AuthProvider({ children }) {
                 body: JSON.stringify(userData),
             });
 
-            const data = await response.json();
+            const resData = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Registration failed');
+                throw new Error(resData.error || 'Registration failed');
             }
 
             console.log('✅ Registration successful');
 
-            // บันทึก user และ token
-            setUser(data.user);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            localStorage.setItem('token', data.token);
+            // API sends { success: true, data: { user: ..., token: ... } }
+            // Support both structures
+            const { user, token } = resData.data || resData;
 
-            return { success: true, user: data.user };
+            // บันทึก user และ token
+            setUser(user);
+            localStorage.setItem('user', JSON.stringify(user));
+            localStorage.setItem('token', token);
+
+            return { success: true, user: user };
         } catch (error) {
             console.error('❌ Registration failed:', error.message);
             return { success: false, error: error.message };

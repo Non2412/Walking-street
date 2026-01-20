@@ -42,52 +42,37 @@ export default function LoginPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Form submitted with:', { email: formData.email, role });
-        if (!validateForm()) {
-            console.log('Form validation failed');
-            return;
-        }
+        if (!validateForm()) return;
 
         setIsLoading(true);
         try {
-            // ส่ง role ไปด้วย (ถ้า AuthContext รองรับ) หรือแค่ login ปกติ
-            // ในระบบ Mock ปัจจุบัน login จะคืนค่า user ซึ่งมี role ติดมาด้วย
             const result = await login(formData.email, formData.password);
-            console.log('🔐 Login Result:', result); // Debugging Log
+            console.log('Login Result:', result);
 
             if (result.success) {
-                const userRole = result.user?.role;
-                console.log('✅ Login success, user role:', userRole);
+                const userRole = result.user?.role || 'user';
 
-                // ตรวจสอบว่า Role ที่เลือกตรงกับ Role ของ User หรือไม่ (Optional Validation)
-                // Temporary Bypass: Allow specific admin email to pass even if role is wrong in DB
-                const isAdminEmail = formData.email === 'admin@example.com';
-
-                if (role === 'admin' && userRole !== 'admin' && !isAdminEmail) {
-                    console.log('❌ Role mismatch - user is not admin');
-                    setErrors({ general: 'บัญชีนี้ไม่ใช่บัญชีผู้ดูแลระบบ' });
-                    setIsLoading(false);
-                    return;
+                // Logic: Check Tab Selection
+                if (role === 'admin') {
+                    // Critical Check: Must have admin role from DB
+                    if (userRole === 'admin') {
+                        // Force full page navigation to ensure clean state
+                        window.location.href = '/admin-dashboard';
+                    } else {
+                        setErrors({ general: 'บัญชีนี้ไม่มีสิทธิ์ผู้ดูแลระบบ' });
+                    }
+                } else {
+                    // Logic: User Tab
+                    // Anyone can login here, but they will be redirected to User Flow
+                    // Force full page navigation
+                    window.location.href = '/bookings';
                 }
 
-                const finalRole = isAdminEmail ? 'admin' : userRole; // Force admin role for this email
-                const redirectUrl = (role === 'admin' || finalRole === 'admin') ? '/admin-dashboard' : '/user-dashboard';
-
-                // If bypassing, update local storage to reflect correct role immediately
-                if (isAdminEmail && result.user) {
-                    const updatedUser = { ...result.user, role: 'admin' };
-                    localStorage.setItem('user', JSON.stringify(updatedUser)); // Force save correct role
-                    console.log('✅ Admin role forced in localStorage');
-                }
-
-                console.log('🚀 Redirecting to:', redirectUrl);
-                router.push(redirectUrl); // Use router instead of window.location
             } else {
-                console.log('❌ Login failed:', result.error);
                 setErrors({ general: result.error || 'เข้าสู่ระบบไม่สำเร็จ' });
             }
         } catch (error) {
-            console.error('❌ Login error:', error);
+            console.error(error);
             setErrors({ general: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
         } finally {
             setIsLoading(false);
@@ -405,6 +390,7 @@ const styles = {
         margin: 0,
         fontSize: '14px',
         color: '#666',
+        isLogin: 'true',
     },
     signUpLink: {
         color: '#667eea',
