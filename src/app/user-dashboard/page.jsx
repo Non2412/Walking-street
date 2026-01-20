@@ -30,6 +30,7 @@ export default function UserDashboard() {
 
     const fetchUserBookings = async () => {
         try {
+            setLoading(true);
             const response = await fetch('/api/bookings');
             const data = await response.json();
             
@@ -37,9 +38,13 @@ export default function UserDashboard() {
                 // Filter เฉพาะการจองของ user นี้
                 const userBookings = data.data || [];
                 setBookings(userBookings);
+            } else {
+                console.warn('API returned success: false', data);
+                setBookings([]);
             }
         } catch (error) {
             console.error('Error fetching bookings:', error);
+            setBookings([]);
         } finally {
             setLoading(false);
         }

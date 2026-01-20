@@ -22,7 +22,7 @@ export async function POST(request) {
         const user = findUserByEmail(email);
 
         console.log('🔍 Login attempt:', { email });
-        console.log('👤 Found user:', user ? 'Yes' : 'No');
+        console.log('👤 Found user:', user ? `Yes - ${user.email}` : 'No');
 
         if (!user) {
             return NextResponse.json(

@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
                 const savedUser = localStorage.getItem('user');
                 const token = localStorage.getItem('token');
 
-                if (savedUser && token) {
+                if (savedUser && savedUser !== 'undefined' && token) {
                     setUser(JSON.parse(savedUser));
                 }
             } catch (error) {
@@ -58,11 +58,14 @@ export function AuthProvider({ children }) {
             console.log('✅ Login successful');
 
             // บันทึก user และ token
-            setUser(data.user);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            localStorage.setItem('token', data.token);
+            const user = data.data?.user;
+            const token = data.data?.token;
+            
+            setUser(user);
+            localStorage.setItem('user', JSON.stringify(user));
+            localStorage.setItem('token', token);
 
-            return { success: true, user: data.user };
+            return { success: true, user: user };
         } catch (error) {
             console.error('❌ Login failed:', error.message);
             return { success: false, error: error.message };
