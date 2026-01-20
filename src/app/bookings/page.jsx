@@ -6,20 +6,77 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MarketAuthProvider } from '@/contexts/MarketAuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
-import { useMarketAuth } from '@/contexts/MarketAuthContext';
-import BookingList from '@/components/BookingList';
+import { useSearchParams } from 'next/navigation';
+
+// ... (other imports)
+
+// ... inside component function BookingsContent() ...
+// But I cannot inject inside function easily without seeing context.
+// Let's add the import first.
+import { useAuth } from '@/contexts/AuthContext';
 import styles from './page.module.css';
 import Script from 'next/script';
 
+// Modal Styles
+const modalStyles = {
+    overlay: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2000,
+        backdropFilter: 'blur(5px)',
+    },
+    content: {
+        backgroundColor: 'white',
+        padding: '32px',
+        borderRadius: '16px',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+        maxWidth: '400px',
+        width: '90%',
+        textAlign: 'center',
+        animation: 'slideUp 0.3s ease-out',
+    }
+};
+
 function BookingsContent() {
-    const { user } = useMarketAuth();
-    const [selectedDay, setSelectedDay] = useState('saturday'); // saturday or sunday
+    const { user } = useAuth();
+    const [selectedDates, setSelectedDates] = useState([]); // Array of date strings
+    const [openDates, setOpenDates] = useState([]);
+    const [isDatesLoading, setIsDatesLoading] = useState(true);
+
+    // Fetch Open Dates
+    React.useEffect(() => {
+        fetch('/api/settings')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.data.openDates && data.data.openDates.length > 0) {
+                    // Sort dates from nearest to future
+                    const sorted = data.data.openDates.sort((a, b) => new Date(a) - new Date(b));
+                    setOpenDates(sorted);
+                    setSelectedDates([sorted[0]]); // Select first available day by default
+                } else {
+                    setOpenDates([]);
+                }
+                setIsDatesLoading(false);
+            })
+            .catch(err => {
+                console.error(err);
+                setIsDatesLoading(false);
+            });
+    }, []);
+
     const [selectedBooths, setSelectedBooths] = useState([]);
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [showLimitModal, setShowLimitModal] = useState(false);
+    const [showTimeoutModal, setShowTimeoutModal] = useState(false);
 
     // Booking Flow State
     const [bookingStep, setBookingStep] = useState(1);
@@ -29,6 +86,87 @@ function BookingsContent() {
         phone: ''
     });
     const [myBookings, setMyBookings] = useState([]);
+    const [allBookings, setAllBookings] = useState([]); // Store all bookings to check availability
+
+    // Fetch All Bookings to check status
+    React.useEffect(() => {
+        const fetchAllBookings = async () => {
+            try {
+                const res = await fetch('/api/bookings');
+                const data = await res.json();
+                if (data.success) {
+                    setAllBookings(data.data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch bookings", err);
+            }
+        };
+        fetchAllBookings();
+        // Set interval to refresh every 10 seconds (optional)
+        const interval = setInterval(fetchAllBookings, 10000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Check booth status (Multi-date aware)
+    const getBoothStatus = (boothId) => {
+        if (selectedDates.length === 0) return null;
+
+        // Find if this booth is booked on ANY of the selected dates
+        // Support backward compatibility (b.targetDate) and new format (b.targetDates)
+        const booking = allBookings.find(b => {
+            if (!b.booths || !b.booths.includes(boothId)) return false;
+            if (!['approved', 'pending', 'waiting_for_payment'].includes(b.status)) return false;
+
+            const bDates = b.targetDates || (b.targetDate ? [b.targetDate] : []);
+            // Check overlap
+            return bDates.some(date => selectedDates.includes(date));
+        });
+
+        if (booking) {
+            return {
+                isBooked: true,
+                status: booking.status,
+                ownerName: booking.name || 'จองแล้ว'
+            };
+        }
+        return null;
+    };
+
+    // Timer State
+    const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+    const [currentBookingId, setCurrentBookingId] = useState(null); // Keep track of current booking
+
+    // Timer Logic
+    React.useEffect(() => {
+        let timer;
+        if (showBookingModal && bookingStep === 2 && timeLeft > 0) {
+            timer = setInterval(() => {
+                setTimeLeft((prev) => prev - 1);
+            }, 1000);
+        } else if (timeLeft === 0) {
+            // Time out!
+            setShowBookingModal(false);
+            setSelectedBooths([]);
+            setShowTimeoutModal(true); // Show custom modal
+            setBookingStep(1);
+        }
+
+        return () => clearInterval(timer);
+    }, [showBookingModal, bookingStep, timeLeft]);
+
+    // Reset Timer when opening modal
+    React.useEffect(() => {
+        if (showBookingModal) {
+            setTimeLeft(300); // Reset to 5 minutes
+        }
+    }, [showBookingModal]);
+
+    // Format time mm:ss
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
 
     // Update booking details when user loads
     React.useEffect(() => {
@@ -46,6 +184,45 @@ function BookingsContent() {
     const [paymentAmount, setPaymentAmount] = useState('');
     const [isVerifyingSlip, setIsVerifyingSlip] = useState(false);
     const [slipVerificationStatus, setSlipVerificationStatus] = useState(null); // 'success', 'failed', 'error'
+
+    const searchParams = useSearchParams();
+
+    // Check for resume payment
+    React.useEffect(() => {
+        const paymentId = searchParams.get('paymentId');
+        if (paymentId && user) {
+            // Fetch booking details
+            fetch('/api/bookings')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const booking = data.data.find(b => b.id === paymentId);
+                        if (booking && booking.status === 'waiting_for_payment') {
+                            setCurrentBookingId(booking.id);
+
+                            // Restore booths
+                            const restoredBooths = [];
+                            ['A', 'B', 'C'].forEach(zone => {
+                                if (boothsData[zone]) {
+                                    boothsData[zone].forEach(b => {
+                                        if (booking.booths && booking.booths.includes(b.id)) {
+                                            restoredBooths.push(b);
+                                        }
+                                    });
+                                }
+                            });
+
+                            if (restoredBooths.length > 0) {
+                                setSelectedBooths(restoredBooths);
+                                setBookingStep(2);
+                                setShowBookingModal(true);
+                            }
+                        }
+                    }
+                });
+        }
+    }, [searchParams, user]);
+
 
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
@@ -102,9 +279,14 @@ function BookingsContent() {
         };
 
         // กำหนดจำนวนช่องตามวัน (สมดุลกันมากขึ้น)
-        const counts = selectedDay === 'saturday'
+        // This logic needs to be updated if booth counts vary by date.
+        // For now, assuming a fixed structure or a structure based on the *first* selected date if multiple.
+        // Or, if all selected dates have the same booth structure, this is fine.
+        // If booth structure changes per date, this memoization needs to be more complex.
+        const counts = selectedDates.length > 0 && selectedDates[0].includes('saturday') // Assuming 'saturday' in date string
             ? { A: 10, B: 20, C: 10 }  // วันเสาร์: 40 ช่อง (10+20+10)
             : { A: 30, B: 40, C: 30 }; // วันอาทิตย์: 100 ช่อง (30+40+30)
+
 
         // Zone A (฿500)
         for (let i = 1; i <= counts.A; i++) {
@@ -118,75 +300,83 @@ function BookingsContent() {
                 id,
                 zone: 'A',
                 price: 500,
-                status: isMyBooking ? 'pending' : (rand > 7 ? (rand > 8 ? 'booked' : 'pending') : 'available'),
-                bookedBy: rand > 5 ? 'ร้านตัวอย่าง' : null,
-                isMyBooking
+                status: 'available', // Clean default
+                bookedBy: null,
+                isMyBooking: false
             });
         }
 
         // Zone B (฿700)
         for (let i = 1; i <= counts.B; i++) {
             const id = `B-${String(i).padStart(2, '0')}`;
-            const rand = (i * 11) % 10;
-            const isMyBooking = myBookings.includes(id);
-
             booths.B.push({
                 id,
                 zone: 'B',
                 price: 700,
-                status: isMyBooking ? 'pending' : (rand > 7 ? (rand > 8 ? 'booked' : 'pending') : 'available'),
-                bookedBy: rand > 5 ? 'ร้านตัวอย่าง' : null,
-                isMyBooking
+                status: 'available', // Clean default
+                bookedBy: null,
+                isMyBooking: false
             });
         }
 
         // Zone C (฿1000)
         for (let i = 1; i <= counts.C; i++) {
             const id = `C-${String(i).padStart(2, '0')}`;
-            const rand = (i * 13) % 10;
-            const isMyBooking = myBookings.includes(id);
-
             booths.C.push({
                 id,
                 zone: 'C',
                 price: 1000,
-                status: isMyBooking ? 'pending' : (rand > 7 ? (rand > 8 ? 'booked' : 'pending') : 'available'),
-                bookedBy: rand > 5 ? 'ร้านตัวอย่าง' : null,
-                isMyBooking
+                status: 'available', // Clean default
+                bookedBy: null,
+                isMyBooking: false
             });
         }
 
         return booths;
-    }, [selectedDay, myBookings]);
+    }, [selectedDates]); // Update when selectedDates change
+
+    // Helper: isSelected?
+    const isBoothSelected = (id) => selectedBooths.some(b => b.id === id);
 
     const allBooths = [...boothsData.A, ...boothsData.B, ...boothsData.C];
 
-    // คำนวณสถิติ
+    // Calculate Stats based on API status
     const stats = {
         total: allBooths.length,
-        available: allBooths.filter(b => b.status === 'available').length,
-        booked: allBooths.filter(b => b.status === 'booked').length,
-        pending: allBooths.filter(b => b.status === 'pending').length,
+        available: allBooths.length, // Client-side base count
+        booked: 0,
+        pending: 0
     };
 
+    // Update stats dynamically based on API data if needed, 
+    // but for now UI uses dynamic getBoothStatus. 
+    // To make stats accurate, we should count from allBookings based on selectedDates.
+    if (selectedDates.length > 0) {
+        // Count booths that are booked on ANY selected date
+        // This is complex on client side without iterating booths.
+        // Simplified: render logic handles the lock display.
+    }
+
+
     const handleBoothClick = (booth) => {
-        if (booth.status === 'available') {
-            setSelectedBooths(prev => {
-                const isSelected = prev.some(b => b.id === booth.id);
-                if (isSelected) {
-                    return prev.filter(b => b.id !== booth.id);
-                } else {
-                    if (prev.length >= 3) {
-                        setShowLimitModal(true);
-                        return prev;
-                    }
-                    return [...prev, booth];
-                }
-            });
+        // Validation 1: API Status Check
+        const apiStatus = getBoothStatus(booth.id);
+        if (apiStatus && apiStatus.isBooked) return;
+
+        // Toggle Selection
+        if (isBoothSelected(booth.id)) {
+            setSelectedBooths(prev => prev.filter(b => b.id !== booth.id));
+        } else {
+            // Check Limit
+            if (selectedBooths.length >= 2) {
+                setShowLimitModal(true);
+                return;
+            }
+            setSelectedBooths(prev => [...prev, booth]);
         }
     };
 
-    const isBoothSelected = (id) => selectedBooths.some(b => b.id === id);
+
 
     const getStatusIcon = (status, isSelected) => {
         if (isSelected) return '✓';
@@ -228,6 +418,35 @@ function BookingsContent() {
                                 <p className={styles.welcomeSubtitle}>
                                     ยินดีต้อนรับสู่ระบบจัดการตลาดถนนคนเดินศรีสะเกษ
                                 </p>
+                                <button
+                                    onClick={() => window.location.href = '/user-dashboard'}
+                                    style={{
+                                        marginTop: '16px',
+                                        padding: '10px 20px',
+                                        backgroundColor: '#fff',
+                                        color: '#667eea',
+                                        border: '1px solid #667eea',
+                                        borderRadius: '30px',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold',
+                                        fontSize: '14px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#667eea';
+                                        e.currentTarget.style.color = '#fff';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#fff';
+                                        e.currentTarget.style.color = '#667eea';
+                                    }}
+                                >
+                                    📊 ติดตามสถานะการจองของคุณ
+                                </button>
                             </div>
                             <div className={styles.dateSection}>
                                 <span className={styles.dateText}>
@@ -243,36 +462,51 @@ function BookingsContent() {
 
                         {/* Day Selection */}
                         <div className={styles.dayButtons}>
-                            <button
-                                className={`${styles.dayButton} ${selectedDay === 'saturday' ? styles.dayButtonActive : ''}`}
-                                style={{
-                                    backgroundColor: selectedDay === 'saturday' ? '#667eea' : '#f8f9fa',
-                                    color: selectedDay === 'saturday' ? '#fff' : '#666'
-                                }}
-                                onClick={() => {
-                                    setSelectedDay('saturday');
-                                    setSelectedBooths([]); // Reset selection on day change
-                                }}
-                            >
-                                <span className={styles.dayIcon}>📅</span>
-                                <span className={styles.dayText}>วันเสาร์</span>
-                                <span className={styles.daySubtext}>เปิดจองพรุ่งนี้</span>
-                            </button>
-                            <button
-                                className={`${styles.dayButton} ${selectedDay === 'sunday' ? styles.dayButtonActive : ''}`}
-                                style={{
-                                    backgroundColor: selectedDay === 'sunday' ? '#f093fb' : '#f8f9fa',
-                                    color: selectedDay === 'sunday' ? '#fff' : '#666'
-                                }}
-                                onClick={() => {
-                                    setSelectedDay('sunday');
-                                    setSelectedBooths([]); // Reset selection on day change
-                                }}
-                            >
-                                <span className={styles.dayIcon}>📅</span>
-                                <span className={styles.dayText}>วันอาทิตย์</span>
-                                <span className={styles.daySubtext}>เปิดจองพรุ่งนี้</span>
-                            </button>
+                            {isDatesLoading ? (
+                                <div style={{ color: '#666' }}>กำลังโหลดตารางจอง...</div>
+                            ) : openDates.length === 0 ? (
+                                <div style={{ color: '#e74c3c' }}>ยังไม่มีรอบการจองที่เปิดในขณะนี้</div>
+                            ) : (
+                                openDates.map(dateStr => {
+                                    const date = new Date(dateStr);
+                                    const isSelected = selectedDates.includes(dateStr);
+                                    return (
+                                        <button
+                                            key={dateStr}
+                                            className={`${styles.dayButton} ${isSelected ? styles.dayButtonActive : ''}`}
+                                            style={{
+                                                backgroundColor: isSelected ? '#667eea' : '#f8f9fa',
+                                                color: isSelected ? '#fff' : '#666',
+                                                minWidth: '140px',
+                                                border: isSelected ? '2px solid #5a67d8' : '1px solid #e2e8f0',
+                                                position: 'relative'
+                                            }}
+                                            onClick={() => {
+                                                // Toggle Selection
+                                                if (selectedDates.includes(dateStr)) {
+                                                    // Allow unselect only if more than 1 is selected
+                                                    if (selectedDates.length > 1) {
+                                                        setSelectedDates(prev => prev.filter(d => d !== dateStr));
+                                                        setSelectedBooths([]); // Reset booths on change
+                                                    }
+                                                } else {
+                                                    setSelectedDates(prev => [...prev, dateStr].sort()); // Keep sorted
+                                                    setSelectedBooths([]); // Reset booths on change
+                                                }
+                                            }}
+                                        >
+                                            {isSelected && <span style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#e74c3c', color: 'white', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</span>}
+                                            <span className={styles.dayIcon}>📅</span>
+                                            <span className={styles.dayText}>
+                                                {date.toLocaleDateString('th-TH', { weekday: 'long' })}
+                                            </span>
+                                            <span className={styles.daySubtext}>
+                                                {date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                                            </span>
+                                        </button>
+                                    );
+                                })
+                            )}
                         </div>
 
                         {/* Statistics */}
@@ -318,28 +552,37 @@ function BookingsContent() {
                                     <div className={styles.boothScroll} id="zoneA">
                                         {boothsData.A.map(booth => {
                                             const isSelected = isBoothSelected(booth.id);
+                                            const apiStatus = getBoothStatus(booth.id);
+                                            const isBooked = apiStatus && apiStatus.isBooked;
+
                                             return (
                                                 <div
                                                     key={booth.id}
-                                                    className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
+                                                    className={styles.boothCard}
                                                     style={{
-                                                        borderColor: isSelected ? '#3498db' : '#27ae60',
-                                                        backgroundColor: isSelected ? '#3498db' : (booth.status === 'available' ? '#fff' :
-                                                            booth.status === 'booked' ? '#fadbd8' : '#fef5e7'),
-                                                        color: isSelected ? '#fff' : 'inherit',
+                                                        borderColor: isSelected ? '#3498db' : (isBooked ? '#ef9a9a' : '#27ae60'),
+                                                        backgroundColor: isSelected ? '#3498db' : (isBooked ? '#ffebee' : '#fff'),
+                                                        color: isSelected ? '#fff' : (isBooked ? '#c62828' : 'inherit'),
                                                         transform: isSelected ? 'scale(1.05)' : 'none',
-                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : ''
+                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : '',
+                                                        cursor: isBooked ? 'not-allowed' : 'pointer',
+                                                        display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
                                                     }}
-                                                    onClick={() => handleBoothClick(booth)}
+                                                    onClick={() => !isBooked && handleBoothClick(booth)}
                                                 >
-                                                    <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
-                                                    <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
-                                                    <div
-                                                        className={styles.boothStatus}
-                                                        style={{ color: getStatusColor(booth.status, isSelected) }}
-                                                    >
-                                                        {getStatusIcon(booth.status, isSelected)}
-                                                    </div>
+                                                    {isBooked ? (
+                                                        <>
+                                                            <div style={{ fontSize: '24px', marginBottom: '4px' }}>🔒</div>
+                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                {apiStatus.ownerName}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
+                                                            <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -359,28 +602,37 @@ function BookingsContent() {
                                     <div className={styles.boothScroll} id="zoneB1">
                                         {boothsData.B.slice(0, Math.ceil(boothsData.B.length / 2)).map(booth => {
                                             const isSelected = isBoothSelected(booth.id);
+                                            const apiStatus = getBoothStatus(booth.id);
+                                            const isBooked = apiStatus && apiStatus.isBooked;
+
                                             return (
                                                 <div
                                                     key={booth.id}
-                                                    className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
+                                                    className={styles.boothCard}
                                                     style={{
-                                                        borderColor: isSelected ? '#3498db' : '#f39c12',
-                                                        backgroundColor: isSelected ? '#3498db' : (booth.status === 'available' ? '#fff' :
-                                                            booth.status === 'booked' ? '#fadbd8' : '#fef5e7'),
-                                                        color: isSelected ? '#fff' : 'inherit',
+                                                        borderColor: isSelected ? '#3498db' : (isBooked ? '#ef9a9a' : '#f39c12'),
+                                                        backgroundColor: isSelected ? '#3498db' : (isBooked ? '#ffebee' : '#fff'),
+                                                        color: isSelected ? '#fff' : (isBooked ? '#c62828' : 'inherit'),
                                                         transform: isSelected ? 'scale(1.05)' : 'none',
-                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : ''
+                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : '',
+                                                        cursor: isBooked ? 'not-allowed' : 'pointer',
+                                                        display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
                                                     }}
-                                                    onClick={() => handleBoothClick(booth)}
+                                                    onClick={() => !isBooked && handleBoothClick(booth)}
                                                 >
-                                                    <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
-                                                    <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
-                                                    <div
-                                                        className={styles.boothStatus}
-                                                        style={{ color: getStatusColor(booth.status, isSelected) }}
-                                                    >
-                                                        {getStatusIcon(booth.status, isSelected)}
-                                                    </div>
+                                                    {isBooked ? (
+                                                        <>
+                                                            <div style={{ fontSize: '24px', marginBottom: '4px' }}>🔒</div>
+                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                {apiStatus.ownerName}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
+                                                            <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -393,28 +645,37 @@ function BookingsContent() {
                                     <div className={styles.boothScroll} id="zoneB2">
                                         {boothsData.B.slice(Math.ceil(boothsData.B.length / 2)).map(booth => {
                                             const isSelected = isBoothSelected(booth.id);
+                                            const apiStatus = getBoothStatus(booth.id);
+                                            const isBooked = apiStatus && apiStatus.isBooked;
+
                                             return (
                                                 <div
                                                     key={booth.id}
-                                                    className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
+                                                    className={styles.boothCard}
                                                     style={{
-                                                        borderColor: isSelected ? '#3498db' : '#f39c12',
-                                                        backgroundColor: isSelected ? '#3498db' : (booth.status === 'available' ? '#fff' :
-                                                            booth.status === 'booked' ? '#fadbd8' : '#fef5e7'),
-                                                        color: isSelected ? '#fff' : 'inherit',
+                                                        borderColor: isSelected ? '#3498db' : (isBooked ? '#ef9a9a' : '#f39c12'),
+                                                        backgroundColor: isSelected ? '#3498db' : (isBooked ? '#ffebee' : '#fff'),
+                                                        color: isSelected ? '#fff' : (isBooked ? '#c62828' : 'inherit'),
                                                         transform: isSelected ? 'scale(1.05)' : 'none',
-                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : ''
+                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : '',
+                                                        cursor: isBooked ? 'not-allowed' : 'pointer',
+                                                        display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
                                                     }}
-                                                    onClick={() => handleBoothClick(booth)}
+                                                    onClick={() => !isBooked && handleBoothClick(booth)}
                                                 >
-                                                    <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
-                                                    <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
-                                                    <div
-                                                        className={styles.boothStatus}
-                                                        style={{ color: getStatusColor(booth.status, isSelected) }}
-                                                    >
-                                                        {getStatusIcon(booth.status, isSelected)}
-                                                    </div>
+                                                    {isBooked ? (
+                                                        <>
+                                                            <div style={{ fontSize: '24px', marginBottom: '4px' }}>🔒</div>
+                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                {apiStatus.ownerName}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
+                                                            <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -433,28 +694,37 @@ function BookingsContent() {
                                     <div className={styles.boothScroll} id="zoneC">
                                         {boothsData.C.map(booth => {
                                             const isSelected = isBoothSelected(booth.id);
+                                            const apiStatus = getBoothStatus(booth.id);
+                                            const isBooked = apiStatus && apiStatus.isBooked;
+
                                             return (
                                                 <div
                                                     key={booth.id}
-                                                    className={`${styles.boothCard} ${booth.status === 'available' ? styles.boothAvailable : ''}`}
+                                                    className={styles.boothCard}
                                                     style={{
-                                                        borderColor: isSelected ? '#3498db' : '#3498db',
-                                                        backgroundColor: isSelected ? '#3498db' : (booth.status === 'available' ? '#fff' :
-                                                            booth.status === 'booked' ? '#fadbd8' : '#fef5e7'),
-                                                        color: isSelected ? '#fff' : 'inherit',
+                                                        borderColor: isSelected ? '#3498db' : (isBooked ? '#ef9a9a' : '#3498db'),
+                                                        backgroundColor: isSelected ? '#3498db' : (isBooked ? '#ffebee' : '#fff'),
+                                                        color: isSelected ? '#fff' : (isBooked ? '#c62828' : 'inherit'),
                                                         transform: isSelected ? 'scale(1.05)' : 'none',
-                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : ''
+                                                        boxShadow: isSelected ? '0 4px 12px rgba(52, 152, 219, 0.4)' : '',
+                                                        cursor: isBooked ? 'not-allowed' : 'pointer',
+                                                        display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'
                                                     }}
-                                                    onClick={() => handleBoothClick(booth)}
+                                                    onClick={() => !isBooked && handleBoothClick(booth)}
                                                 >
-                                                    <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
-                                                    <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
-                                                    <div
-                                                        className={styles.boothStatus}
-                                                        style={{ color: getStatusColor(booth.status, isSelected) }}
-                                                    >
-                                                        {getStatusIcon(booth.status, isSelected)}
-                                                    </div>
+                                                    {isBooked ? (
+                                                        <>
+                                                            <div style={{ fontSize: '24px', marginBottom: '4px' }}>🔒</div>
+                                                            <div style={{ fontSize: '10px', fontWeight: 'bold', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                {apiStatus.ownerName}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className={styles.boothNumber} style={{ color: isSelected ? '#fff' : undefined }}>{booth.id}</div>
+                                                            <div className={styles.boothPrice} style={{ color: isSelected ? '#fff' : undefined }}>฿{booth.price}</div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -616,7 +886,36 @@ function BookingsContent() {
                                                 <button className={styles.cancelButton} onClick={() => setShowBookingModal(false)}>ยกเลิก</button>
                                                 <button
                                                     className={styles.confirmButton}
-                                                    onClick={() => setBookingStep(2)}
+                                                    onClick={async () => {
+                                                        // Create Booking Logic
+                                                        try {
+                                                            const res = await fetch('/api/bookings', {
+                                                                method: 'POST',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({
+                                                                    userId: user.id || 'guest', // Should be real user ID
+                                                                    name: bookingDetails.name,
+                                                                    email: bookingDetails.email,
+                                                                    phone: bookingDetails.phone,
+                                                                    booths: selectedBooths.map(b => b.id),
+                                                                    totalPrice: getTotalPrice(),
+                                                                    paymentMethod: 'promptpay',
+                                                                    status: 'waiting_for_payment',
+                                                                    targetDates: selectedDates // Send array of dates
+                                                                })
+                                                            });
+                                                            const data = await res.json();
+                                                            if (data.success) {
+                                                                setCurrentBookingId(data.data.id); // Save ID for step 2
+                                                                setBookingStep(2);
+                                                            } else {
+                                                                alert('เกิดข้อผิดพลาดในการจอง: ' + data.error);
+                                                            }
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+                                                        }
+                                                    }}
                                                     style={{ opacity: (!bookingDetails.name || !bookingDetails.phone) ? 0.5 : 1 }}
                                                     disabled={!bookingDetails.name || !bookingDetails.phone}
                                                 >
@@ -629,7 +928,23 @@ function BookingsContent() {
                             ) : (
                                 /* Step 2: Payment & Upload */
                                 <div className={styles.stepContainer}>
-                                    <h3 className={styles.stepTitle}>การชำระเงิน</h3>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                        <h3 className={styles.stepTitle} style={{ margin: 0 }}>การชำระเงิน</h3>
+                                        <div style={{
+                                            backgroundColor: timeLeft < 60 ? '#fee2e2' : '#f3f4f6',
+                                            color: timeLeft < 60 ? '#ef4444' : '#374151',
+                                            padding: '6px 14px',
+                                            borderRadius: '20px',
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px'
+                                        }}>
+                                            <span>⏱️ เหลือเวลาชำระเงิน</span>
+                                            <span style={{ fontSize: '18px', fontFamily: 'monospace' }}>{formatTime(timeLeft)}</span>
+                                        </div>
+                                    </div>
 
                                     <div className={styles.stepLayout}>
                                         {/* Left: Summary */}
@@ -742,7 +1057,7 @@ function BookingsContent() {
                                                 <button className={styles.cancelButton} onClick={() => setBookingStep(1)}>ย้อนกลับ</button>
                                                 <button
                                                     className={styles.confirmButton}
-                                                    onClick={() => {
+                                                    onClick={async () => {
                                                         const total = getTotalPrice();
                                                         if (parseFloat(paymentAmount) !== total) {
                                                             alert(`ยอดเงินไม่ถูกต้อง กรุณาระบุจำนวนเงินให้ตรงกับยอดชำระ (${total.toLocaleString()} บาท)`);
@@ -759,16 +1074,38 @@ function BookingsContent() {
                                                             if (!confirm) return;
                                                         }
 
-                                                        // Add to my bookings
-                                                        const newBookings = selectedBooths.map(b => b.id);
-                                                        setMyBookings(prev => [...prev, ...newBookings]);
+                                                        // API Call to Update Status
+                                                        try {
+                                                            const res = await fetch('/api/bookings', {
+                                                                method: 'PUT',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({
+                                                                    id: currentBookingId, // Use the ID from step 1
+                                                                    status: 'pending',
+                                                                    paymentSlip: uploadPreview, // Base64 string
+                                                                    price: parseFloat(paymentAmount)
+                                                                })
+                                                            });
 
-                                                        // Clear state
-                                                        setUploadPreview(null);
-                                                        setPaymentAmount('');
-                                                        alert('จองสำเร็จ! กรุณารอการตรวจสอบ');
-                                                        setShowBookingModal(false);
-                                                        setSelectedBooths([]);
+                                                            const data = await res.json();
+                                                            if (data.success) {
+                                                                alert('จองสำเร็จ! กรุณารอการตรวจสอบจากแอดมิน');
+
+                                                                // Add to local state strictly for UI feedback if needed, but better to rely on API fetch
+                                                                setMyBookings(prev => [...prev, ...selectedBooths.map(b => b.id)]);
+
+                                                                // Clear state
+                                                                setUploadPreview(null);
+                                                                setPaymentAmount('');
+                                                                setShowBookingModal(false);
+                                                                setSelectedBooths([]);
+                                                            } else {
+                                                                alert('เกิดข้อผิดพลาด: ' + data.error);
+                                                            }
+                                                        } catch (err) {
+                                                            console.error('Submission Error:', err);
+                                                            alert('ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+                                                        }
                                                     }}
                                                 >
                                                     แจ้งชำระเงิน
@@ -802,16 +1139,45 @@ function BookingsContent() {
             </div>
             {/* Load Tesseract.js from CDN */}
             <Script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" strategy="lazyOnload" />
+            {/* Timeout Modal */}
+            {showTimeoutModal && (
+                <div style={modalStyles.overlay}>
+                    <div style={modalStyles.content}>
+                        <div style={{ fontSize: '48px', marginBottom: '16px', animation: 'shake 0.5s' }}>⏳</div>
+                        <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '8px', color: '#e74c3c' }}>
+                            หมดเวลาทำรายการ
+                        </h2>
+                        <p style={{ color: '#666', marginBottom: '24px' }}>
+                            เวลาในการชำระเงินของคุณหมดแล้ว<br />
+                            กรุณาเลือกพื้นที่และทำรายการใหม่อีกครั้ง
+                        </p>
+                        <button
+                            onClick={() => setShowTimeoutModal(false)}
+                            style={{
+                                backgroundColor: '#667eea',
+                                color: 'white',
+                                border: 'none',
+                                padding: '10px 30px',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                fontSize: '16px',
+                                boxShadow: '0 4px 6px rgba(102, 126, 234, 0.25)'
+                            }}
+                        >
+                            รับทราบ
+                        </button>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
 
 export default function BookingsPage() {
     return (
-        <MarketAuthProvider>
-            <ProtectedRoute>
-                <BookingsContent />
-            </ProtectedRoute>
-        </MarketAuthProvider>
+        <ProtectedRoute>
+            <BookingsContent />
+        </ProtectedRoute>
     );
 }

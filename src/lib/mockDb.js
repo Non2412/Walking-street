@@ -152,7 +152,20 @@ export function deleteBooking(id) {
 export function resetDatabase() {
     saveData(USERS_FILE, DEFAULT_USERS);
     saveData(BOOKINGS_FILE, []);
+    saveData(SETTINGS_FILE, { openDates: [] });
     console.log('🔄 Database reset');
+}
+
+// --- Settings ---
+export const SETTINGS_FILE = path.join(process.cwd(), 'data', 'settings.json');
+
+export function getSettings() {
+    return loadData(SETTINGS_FILE, { openDates: [] });
+}
+
+export function saveSettings(settings) {
+    saveData(SETTINGS_FILE, settings);
+    return settings;
 }
 
 // สร้าง directory ถ้ายังไม่มี
