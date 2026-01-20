@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  web:
+    container_name: walking-market-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      # Map data directory to persist bookings and user data
+      - ./data:/app/data
+      # Map public/uploads if you implement file uploads later
+      - ./public/uploads:/app/public/uploads
+    environment:
+      - NODE_ENV=production
