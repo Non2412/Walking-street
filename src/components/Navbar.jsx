@@ -7,12 +7,12 @@
 
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useMarketAuth } from '@/contexts/MarketAuthContext';
 
 export default function Navbar() {
     const router = useRouter();
     const pathname = usePathname();
-    const { user, logout } = useAuth();
+    const { user, logout } = useMarketAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const menuItems = [
@@ -58,7 +58,7 @@ export default function Navbar() {
                     <div style={styles.userInfo}>
                         <span style={styles.userIcon}>👤</span>
                         <div style={styles.userDetails}>
-                            <span style={styles.userName}>{user?.name}</span>
+                            <span style={styles.userName}>{user?.fullName || user?.email}</span>
                             <span style={styles.userRole}>
                                 {user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน'}
                             </span>

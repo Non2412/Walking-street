@@ -1,6 +1,6 @@
 /**
- * Admin Login API Route
- * POST /api/auth/login
+ * User Login API Route
+ * POST /api/auth/user-login
  * Proxies to market-api to avoid CORS issues
  */
 
@@ -18,10 +18,10 @@ export async function POST(request) {
             );
         }
 
-        console.log('🔐 Admin login attempt:', { email });
+        console.log('🔐 User login attempt:', { email });
 
         // Proxy to market-api
-        const response = await fetch('https://market-api-mu.vercel.app/api/auth/login', {
+        const response = await fetch('https://market-api-mu.vercel.app/api/auth/user-login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
@@ -37,7 +37,7 @@ export async function POST(request) {
             );
         }
 
-        console.log('✅ Admin login successful:', data);
+        console.log('✅ User login successful:', data);
 
         return NextResponse.json({
             success: true,
@@ -45,7 +45,7 @@ export async function POST(request) {
         });
 
     } catch (error) {
-        console.error('❌ Admin login error:', error);
+        console.error('❌ User login error:', error);
         return NextResponse.json(
             { success: false, error: 'เกิดข้อผิดพลาดในระบบ' },
             { status: 500 }

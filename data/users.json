@@ -20,5 +20,16 @@
     "phone": "0823456789",
     "role": "user",
     "createdAt": "2026-01-11T15:04:45.040Z"
+  },
+  {
+    "id": "3",
+    "email": "example@email.com",
+    "password": "123456",
+    "name": "กก กก",
+    "shopName": "ฟฟ",
+    "shopDescription": "ขายของ",
+    "phone": "0123456789",
+    "role": "user",
+    "createdAt": "2026-01-20T16:17:10.326Z"
   }
 ]

@@ -6,14 +6,16 @@
 'use client';
 
 import React, { useState } from 'react';
+import { MarketAuthProvider } from '@/contexts/MarketAuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
-import { useAuth } from '@/contexts/AuthContext';
+import { useMarketAuth } from '@/contexts/MarketAuthContext';
+import BookingList from '@/components/BookingList';
 import styles from './page.module.css';
 import Script from 'next/script';
 
 function BookingsContent() {
-    const { user } = useAuth();
+    const { user } = useMarketAuth();
     const [selectedDay, setSelectedDay] = useState('saturday'); // saturday or sunday
     const [selectedBooths, setSelectedBooths] = useState([]);
     const [showBookingModal, setShowBookingModal] = useState(false);
@@ -806,8 +808,10 @@ function BookingsContent() {
 
 export default function BookingsPage() {
     return (
-        <ProtectedRoute>
-            <BookingsContent />
-        </ProtectedRoute>
+        <MarketAuthProvider>
+            <ProtectedRoute>
+                <BookingsContent />
+            </ProtectedRoute>
+        </MarketAuthProvider>
     );
 }

@@ -1,12 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { MarketAuthProvider, useMarketAuth } from '@/contexts/MarketAuthContext';
 
-export default function LoginPage() {
-    const router = useRouter();
-    const { login } = useAuth();
+function LoginForm() {
+    const { login, adminLogin } = useMarketAuth();
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -14,15 +12,11 @@ export default function LoginPage() {
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-
-    const [role, setRole] = useState('user'); // 'user' or 'admin'
+    const [role, setRole] = useState('user');
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value,
-        }));
+        setFormData(prev => ({ ...prev, [name]: value }));
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: null }));
         }
@@ -32,10 +26,8 @@ export default function LoginPage() {
         const newErrors = {};
         if (!formData.email) newErrors.email = 'กรุณากรอกอีเมล';
         else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'รูปแบบอีเมลไม่ถูกต้อง';
-
         if (!formData.password) newErrors.password = 'กรุณากรอกรหัสผ่าน';
-        else if (formData.password.length < 6) newErrors.password = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
-
+        else if (formData.password.length < 6) newErrors.password = 'รหัสผ่านต้องมี 6 ตัวขึ้นไป';
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -46,385 +38,208 @@ export default function LoginPage() {
 
         setIsLoading(true);
         try {
-            const result = await login(formData.email, formData.password);
-            console.log('Login Result:', result);
+            console.log('🔐 Login attempt:', { email: formData.email, role });
+            
+            const loginFunc = role === 'admin' ? adminLogin : login;
+            const result = await loginFunc(formData.email, formData.password);
+            
+            console.log('✅ Login result:', result);
 
             if (result.success) {
-                const userRole = result.user?.role || 'user';
-
-                // Logic: Check Tab Selection
-                if (role === 'admin') {
-                    // Critical Check: Must have admin role from DB
-                    if (userRole === 'admin') {
-                        // Force full page navigation to ensure clean state
-                        window.location.href = '/admin-dashboard';
-                    } else {
-                        setErrors({ general: 'บัญชีนี้ไม่มีสิทธิ์ผู้ดูแลระบบ' });
-                    }
-                } else {
-                    // Logic: User Tab
-                    // Anyone can login here, but they will be redirected to User Flow
-                    // Force full page navigation
-                    window.location.href = '/bookings';
-                }
-
+                window.location.href = role === 'admin' ? '/admin-dashboard' : '/bookings';
             } else {
                 setErrors({ general: result.error || 'เข้าสู่ระบบไม่สำเร็จ' });
             }
         } catch (error) {
-            console.error(error);
-            setErrors({ general: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
+            console.error('❌ Error:', error);
+            setErrors({ general: 'เกิดข้อผิดพลาด' });
         } finally {
             setIsLoading(false);
         }
     };
 
+    const styles = {
+        container: {
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backgroundColor: '#f5f5f5',
+        },
+        card: {
+            backgroundColor: '#fff',
+            borderRadius: '16px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+            padding: '40px',
+            width: '100%',
+            maxWidth: '420px',
+        },
+        title: {
+            fontSize: '28px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            marginBottom: '8px',
+            color: '#333',
+        },
+        subtitle: {
+            fontSize: '14px',
+            textAlign: 'center',
+            color: '#666',
+            marginBottom: '24px',
+        },
+        tabs: {
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '24px',
+            backgroundColor: '#f0f0f0',
+            padding: '4px',
+            borderRadius: '8px',
+        },
+        tab: {
+            flex: 1,
+            padding: '10px',
+            border: 'none',
+            borderRadius: '6px',
+            backgroundColor: 'transparent',
+            cursor: 'pointer',
+            fontWeight: '500',
+            color: '#666',
+            transition: 'all 0.3s',
+        },
+        tabActive: {
+            backgroundColor: '#fff',
+            color: '#333',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+        },
+        form: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+        },
+        input: {
+            padding: '12px',
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontFamily: 'inherit',
+        },
+        inputError: {
+            borderColor: '#e74c3c',
+        },
+        error: {
+            color: '#e74c3c',
+            fontSize: '12px',
+            marginTop: '4px',
+        },
+        generalError: {
+            backgroundColor: '#fee',
+            color: '#c33',
+            padding: '12px',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            fontSize: '14px',
+        },
+        button: {
+            padding: '12px',
+            backgroundColor: '#667eea',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.3s',
+        },
+        buttonDisabled: {
+            opacity: 0.6,
+            cursor: 'not-allowed',
+        },
+    };
+
     return (
         <div style={styles.container}>
-            <div style={styles.backgroundImage}></div>
-            <div style={styles.overlay}></div>
-
             <div style={styles.card}>
-                <div style={styles.header}>
-                    <img src="/img/walking.png" alt="Logo" style={styles.logoImage} />
-                    <h1 style={styles.title}>ระบบจัดการตลาด</h1>
-                    <p style={styles.subtitle}>เข้าสู่ระบบเพื่อจัดการการจองพื้นที่</p>
-                </div>
+                <h1 style={styles.title}>เข้าสู่ระบบ</h1>
+                <p style={styles.subtitle}>ระบบจัดการตลาดถนนคนเดิน</p>
 
-                {/* Role Tabs */}
-                <div style={styles.tabsContainer}>
+                <div style={styles.tabs}>
                     <button
-                        type="button"
-                        style={role === 'user' ? styles.activeTab : styles.tab}
+                        style={{ ...styles.tab, ...(role === 'user' ? styles.tabActive : {}) }}
                         onClick={() => setRole('user')}
                     >
-                        ลูกค้า / ผู้จอง
+                        ลูกค้า
                     </button>
                     <button
-                        type="button"
-                        style={role === 'admin' ? styles.activeTab : styles.tab}
+                        style={{ ...styles.tab, ...(role === 'admin' ? styles.tabActive : {}) }}
                         onClick={() => setRole('admin')}
                     >
-                        ผู้ดูแลระบบ
+                        ผู้ดูแล
                     </button>
                 </div>
 
-                {errors.general && (
-                    <div style={styles.errorBox}>
-                        <span style={styles.errorIcon}>⚠️</span>
-                        <span>{errors.general}</span>
-                    </div>
-                )}
+                {errors.general && <div style={styles.generalError}>{errors.general}</div>}
 
                 <form onSubmit={handleSubmit} style={styles.form}>
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>
-                            <span style={styles.labelIcon}>📧</span>
-                            อีเมล ({role === 'admin' ? 'Admin' : 'User'})
-                        </label>
+                    <div>
                         <input
                             type="email"
                             name="email"
+                            placeholder={role === 'admin' ? 'admin@example.com' : 'user@example.com'}
                             value={formData.email}
                             onChange={handleChange}
-                            placeholder={role === 'admin' ? "admin@example.com" : "example@email.com"}
-                            style={errors.email ? { ...styles.input, ...styles.inputError } : styles.input}
-                            disabled={isLoading}
+                            style={{
+                                ...styles.input,
+                                ...(errors.email ? styles.inputError : {}),
+                            }}
                         />
-                        {errors.email && <span style={styles.errorText}>{errors.email}</span>}
+                        {errors.email && <div style={styles.error}>{errors.email}</div>}
                     </div>
 
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>
-                            <span style={styles.labelIcon}>🔒</span>
-                            รหัสผ่าน
-                        </label>
-                        <div style={styles.passwordWrapper}>
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                placeholder="••••••••"
-                                style={errors.password ? { ...styles.input, ...styles.inputError } : styles.input}
-                                disabled={isLoading}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                style={styles.togglePassword}
-                                disabled={isLoading}
-                            >
-                                {showPassword ? '👁️' : '👁️‍🗨️'}
-                            </button>
-                        </div>
-                        {errors.password && <span style={styles.errorText}>{errors.password}</span>}
+                    <div>
+                        <input
+                            type={showPassword ? 'text' : 'password'}
+                            name="password"
+                            placeholder="รหัสผ่าน"
+                            value={formData.password}
+                            onChange={handleChange}
+                            style={{
+                                ...styles.input,
+                                ...(errors.password ? styles.inputError : {}),
+                            }}
+                        />
+                        {errors.password && <div style={styles.error}>{errors.password}</div>}
                     </div>
 
-                    <div style={styles.options}>
-                        <label style={styles.checkbox}>
-                            <input type="checkbox" style={styles.checkboxInput} />
-                            <span style={styles.checkboxLabel}>จดจำฉันไว้</span>
-                        </label>
-                        <a href="/forgot-password" style={styles.forgotPassword}>ลืมรหัสผ่าน?</a>
-                    </div>
+                    <label style={{ display: 'flex', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
+                        <input
+                            type="checkbox"
+                            checked={showPassword}
+                            onChange={(e) => setShowPassword(e.target.checked)}
+                        />
+                        แสดงรหัสผ่าน
+                    </label>
 
                     <button
                         type="submit"
                         disabled={isLoading}
-                        style={isLoading ? { ...styles.submitButton, ...styles.submitButtonDisabled } : styles.submitButton}
+                        style={{
+                            ...styles.button,
+                            ...(isLoading ? styles.buttonDisabled : {}),
+                        }}
                     >
-                        {isLoading ? (
-                            <><span style={styles.spinner}></span>กำลังเข้าสู่ระบบ...</>
-                        ) : (
-                            <><span style={{ marginRight: '8px' }}>🚀</span>เข้าสู่ระบบ ({role === 'admin' ? 'Admin' : 'User'})</>
-                        )}
+                        {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
                     </button>
                 </form>
-
-                <div style={styles.footer}>
-                    <p style={styles.footerText}>
-                        ยังไม่มีบัญชี?{' '}
-                        <a href="/register" style={styles.signUpLink}>สมัครสมาชิก</a>
-                    </p>
-                </div>
             </div>
         </div>
     );
 }
 
-// ========================================
-// Styles
-// ========================================
-
-const styles = {
-    container: {
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    backgroundImage: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundImage: 'url(/img/walking.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        filter: 'blur(8px)',
-        transform: 'scale(1.1)',
-        zIndex: 0,
-    },
-    overlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        zIndex: 1,
-    },
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: '24px',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-        padding: '48px',
-        width: '100%',
-        maxWidth: '480px',
-        position: 'relative',
-        zIndex: 2,
-    },
-    header: {
-        textAlign: 'center',
-        marginBottom: '32px',
-    },
-    logoImage: {
-        width: '280px',
-        height: 'auto',
-        maxWidth: '100%',
-        objectFit: 'contain',
-        marginBottom: '24px',
-    }, title: {
-        fontSize: '28px',
-        fontWeight: 'bold',
-        color: '#2c3e50',
-        margin: '0 0 8px 0',
-    },
-    subtitle: {
-        fontSize: '14px',
-        color: '#7f8c8d',
-        margin: 0,
-    },
-    errorBox: {
-        backgroundColor: '#fee',
-        color: '#c33',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        marginBottom: '24px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        fontSize: '14px',
-    },
-    errorIcon: {
-        fontSize: '18px',
-    },
-    form: {
-        marginBottom: '24px',
-    },
-    formGroup: {
-        marginBottom: '20px',
-    },
-    label: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        marginBottom: '8px',
-        fontSize: '14px',
-        fontWeight: '600',
-        color: '#2c3e50',
-    },
-    labelIcon: {
-        fontSize: '16px',
-    },
-    input: {
-        width: '100%',
-        padding: '14px 16px',
-        border: '2px solid #e0e0e0',
-        borderRadius: '12px',
-        fontSize: '15px',
-        transition: 'all 0.3s',
-        boxSizing: 'border-box',
-        fontFamily: 'inherit',
-        backgroundColor: '#ffffff',
-        color: '#2c3e50',
-    },
-    inputError: {
-        borderColor: '#e74c3c',
-    },
-    passwordWrapper: {
-        position: 'relative',
-    },
-    togglePassword: {
-        position: 'absolute',
-        right: '12px',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '20px',
-        padding: '4px',
-    },
-    errorText: {
-        display: 'block',
-        marginTop: '6px',
-        color: '#e74c3c',
-        fontSize: '13px',
-    },
-    options: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px',
-    },
-    checkbox: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        cursor: 'pointer',
-    },
-    checkboxInput: {
-        cursor: 'pointer',
-    },
-    checkboxLabel: {
-        fontSize: '14px',
-        color: '#555',
-    },
-    forgotPassword: {
-        fontSize: '14px',
-        color: '#667eea',
-        textDecoration: 'none',
-        fontWeight: '600',
-    },
-    submitButton: {
-        width: '100%',
-        padding: '16px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '12px',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        transition: 'all 0.3s',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-    },
-    submitButtonDisabled: {
-        opacity: 0.7,
-        cursor: 'not-allowed',
-    },
-    spinner: {
-        width: '16px',
-        height: '16px',
-        border: '2px solid #fff',
-        borderTop: '2px solid transparent',
-        borderRadius: '50%',
-        animation: 'spin 0.8s linear infinite',
-    },
-    footer: {
-        textAlign: 'center',
-        paddingTop: '24px',
-        borderTop: '1px solid #e0e0e0',
-    },
-    footerText: {
-        margin: 0,
-        fontSize: '14px',
-        color: '#666',
-        isLogin: 'true',
-    },
-    signUpLink: {
-        color: '#667eea',
-        textDecoration: 'none',
-        fontWeight: '600',
-    },
-    tabsContainer: {
-        display: 'flex',
-        backgroundColor: '#f1f2f6',
-        borderRadius: '12px',
-        padding: '4px',
-        marginBottom: '24px',
-    },
-    tab: {
-        flex: 1,
-        padding: '10px',
-        border: 'none',
-        borderRadius: '8px',
-        backgroundColor: 'transparent',
-        color: '#7f8c8d',
-        fontWeight: '600',
-        cursor: 'pointer',
-        transition: 'all 0.3s',
-    },
-    activeTab: {
-        flex: 1,
-        padding: '10px',
-        border: 'none',
-        borderRadius: '8px',
-        backgroundColor: '#fff',
-        color: '#2c3e50',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        transition: 'all 0.3s',
-    },
-};
+export default function LoginPage() {
+    return (
+        <MarketAuthProvider>
+            <LoginForm />
+        </MarketAuthProvider>
+    );
+}
