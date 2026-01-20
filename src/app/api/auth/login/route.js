@@ -48,8 +48,10 @@ export async function POST(request) {
 
         return NextResponse.json({
             success: true,
-            user: userWithoutPassword,
-            token: token,
+            data: {
+                user: userWithoutPassword,
+                token: token,
+            },
             message: 'เข้าสู่ระบบสำเร็จ',
         });
 

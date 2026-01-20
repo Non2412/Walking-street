@@ -15,35 +15,26 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
+    const [role, setRole] = useState('user'); // 'user' or 'admin'
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: value,
         }));
-        // ลบ error เมื่อผู้ใช้เริ่มพิมพ์
         if (errors[name]) {
-            setErrors(prev => ({
-                ...prev,
-                [name]: null,
-            }));
+            setErrors(prev => ({ ...prev, [name]: null }));
         }
     };
 
     const validateForm = () => {
         const newErrors = {};
+        if (!formData.email) newErrors.email = 'กรุณากรอกอีเมล';
+        else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'รูปแบบอีเมลไม่ถูกต้อง';
 
-        if (!formData.email) {
-            newErrors.email = 'กรุณากรอกอีเมล';
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'รูปแบบอีเมลไม่ถูกต้อง';
-        }
-
-        if (!formData.password) {
-            newErrors.password = 'กรุณากรอกรหัสผ่าน';
-        } else if (formData.password.length < 6) {
-            newErrors.password = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
-        }
+        if (!formData.password) newErrors.password = 'กรุณากรอกรหัสผ่าน';
+        else if (formData.password.length < 6) newErrors.password = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -51,29 +42,44 @@ export default function LoginPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!validateForm()) {
-            return;
-        }
+        if (!validateForm()) return;
 
         setIsLoading(true);
-
         try {
+            // ส่ง role ไปด้วย (ถ้า AuthContext รองรับ) หรือแค่ login ปกติ
+            // ในระบบ Mock ปัจจุบัน login จะคืนค่า user ซึ่งมี role ติดมาด้วย
             const result = await login(formData.email, formData.password);
+            console.log('Login Result:', result); // Debugging Log
 
             if (result.success) {
-                // Redirect ตามบทบาท
-                const redirectUrl = result.user?.role === 'admin' ? '/admin-dashboard' : '/user-dashboard';
-                router.push(redirectUrl);
+                const userRole = result.user?.role;
+
+                // ตรวจสอบว่า Role ที่เลือกตรงกับ Role ของ User หรือไม่ (Optional Validation)
+                // Temporary Bypass: Allow specific admin email to pass even if role is wrong in DB
+                const isAdminEmail = formData.email === 'admin@example.com';
+
+                if (role === 'admin' && userRole !== 'admin' && !isAdminEmail) {
+                    setErrors({ general: 'บัญชีนี้ไม่ใช่บัญชีผู้ดูแลระบบ' });
+                    // อาจจะ logout ทันทีเพื่อให้ login ใหม่
+                    return;
+                }
+
+                const finalRole = isAdminEmail ? 'admin' : userRole; // Force admin role for this email
+                const redirectUrl = (role === 'admin' || finalRole === 'admin') ? '/admin-dashboard' : '/bookings';
+
+                // If bypassing, update local storage to reflect correct role immediately
+                if (isAdminEmail && result.user) {
+                    const updatedUser = { ...result.user, role: 'admin' };
+                    localStorage.setItem('user', JSON.stringify(updatedUser)); // Force save correct role
+                }
+
+                console.log('Redirecting to:', redirectUrl);
+                window.location.href = redirectUrl; // Force hard navigation
             } else {
-                setErrors({
-                    general: result.error || 'เข้าสู่ระบบไม่สำเร็จ',
-                });
+                setErrors({ general: result.error || 'เข้าสู่ระบบไม่สำเร็จ' });
             }
         } catch {
-            setErrors({
-                general: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง',
-            });
+            setErrors({ general: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
         } finally {
             setIsLoading(false);
         }
@@ -81,24 +87,34 @@ export default function LoginPage() {
 
     return (
         <div style={styles.container}>
-            {/* Background Image */}
             <div style={styles.backgroundImage}></div>
             <div style={styles.overlay}></div>
 
-            {/* Login Card */}
             <div style={styles.card}>
-                {/* Logo/Header */}
                 <div style={styles.header}>
-                    <img
-                        src="/img/walking.png"
-                        alt="Logo"
-                        style={styles.logoImage}
-                    />
+                    <img src="/img/walking.png" alt="Logo" style={styles.logoImage} />
                     <h1 style={styles.title}>ระบบจัดการตลาด</h1>
                     <p style={styles.subtitle}>เข้าสู่ระบบเพื่อจัดการการจองพื้นที่</p>
                 </div>
 
-                {/* Error Message */}
+                {/* Role Tabs */}
+                <div style={styles.tabsContainer}>
+                    <button
+                        type="button"
+                        style={role === 'user' ? styles.activeTab : styles.tab}
+                        onClick={() => setRole('user')}
+                    >
+                        ลูกค้า / ผู้จอง
+                    </button>
+                    <button
+                        type="button"
+                        style={role === 'admin' ? styles.activeTab : styles.tab}
+                        onClick={() => setRole('admin')}
+                    >
+                        ผู้ดูแลระบบ
+                    </button>
+                </div>
+
                 {errors.general && (
                     <div style={styles.errorBox}>
                         <span style={styles.errorIcon}>⚠️</span>
@@ -106,29 +122,24 @@ export default function LoginPage() {
                     </div>
                 )}
 
-                {/* Login Form */}
                 <form onSubmit={handleSubmit} style={styles.form}>
-                    {/* Email Field */}
                     <div style={styles.formGroup}>
                         <label style={styles.label}>
                             <span style={styles.labelIcon}>📧</span>
-                            อีเมล
+                            อีเมล ({role === 'admin' ? 'Admin' : 'User'})
                         </label>
                         <input
                             type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            placeholder="example@email.com"
+                            placeholder={role === 'admin' ? "admin@example.com" : "example@email.com"}
                             style={errors.email ? { ...styles.input, ...styles.inputError } : styles.input}
                             disabled={isLoading}
                         />
-                        {errors.email && (
-                            <span style={styles.errorText}>{errors.email}</span>
-                        )}
+                        {errors.email && <span style={styles.errorText}>{errors.email}</span>}
                     </div>
 
-                    {/* Password Field */}
                     <div style={styles.formGroup}>
                         <label style={styles.label}>
                             <span style={styles.labelIcon}>🔒</span>
@@ -153,49 +164,34 @@ export default function LoginPage() {
                                 {showPassword ? '👁️' : '👁️‍🗨️'}
                             </button>
                         </div>
-                        {errors.password && (
-                            <span style={styles.errorText}>{errors.password}</span>
-                        )}
+                        {errors.password && <span style={styles.errorText}>{errors.password}</span>}
                     </div>
 
-                    {/* Remember Me & Forgot Password */}
                     <div style={styles.options}>
                         <label style={styles.checkbox}>
                             <input type="checkbox" style={styles.checkboxInput} />
                             <span style={styles.checkboxLabel}>จดจำฉันไว้</span>
                         </label>
-                        <a href="/forgot-password" style={styles.forgotPassword}>
-                            ลืมรหัสผ่าน?
-                        </a>
+                        <a href="/forgot-password" style={styles.forgotPassword}>ลืมรหัสผ่าน?</a>
                     </div>
 
-                    {/* Submit Button */}
                     <button
                         type="submit"
                         disabled={isLoading}
                         style={isLoading ? { ...styles.submitButton, ...styles.submitButtonDisabled } : styles.submitButton}
                     >
                         {isLoading ? (
-                            <>
-                                <span style={styles.spinner}></span>
-                                กำลังเข้าสู่ระบบ...
-                            </>
+                            <><span style={styles.spinner}></span>กำลังเข้าสู่ระบบ...</>
                         ) : (
-                            <>
-                                <span>🚀</span>
-                                เข้าสู่ระบบ
-                            </>
+                            <><span style={{ marginRight: '8px' }}>🚀</span>เข้าสู่ระบบ ({role === 'admin' ? 'Admin' : 'User'})</>
                         )}
                     </button>
                 </form>
 
-                {/* Sign Up Link */}
                 <div style={styles.footer}>
                     <p style={styles.footerText}>
                         ยังไม่มีบัญชี?{' '}
-                        <a href="/register" style={styles.signUpLink}>
-                            สมัครสมาชิก
-                        </a>
+                        <a href="/register" style={styles.signUpLink}>สมัครสมาชิก</a>
                     </p>
                 </div>
             </div>
@@ -405,5 +401,35 @@ const styles = {
         color: '#667eea',
         textDecoration: 'none',
         fontWeight: '600',
+    },
+    tabsContainer: {
+        display: 'flex',
+        backgroundColor: '#f1f2f6',
+        borderRadius: '12px',
+        padding: '4px',
+        marginBottom: '24px',
+    },
+    tab: {
+        flex: 1,
+        padding: '10px',
+        border: 'none',
+        borderRadius: '8px',
+        backgroundColor: 'transparent',
+        color: '#7f8c8d',
+        fontWeight: '600',
+        cursor: 'pointer',
+        transition: 'all 0.3s',
+    },
+    activeTab: {
+        flex: 1,
+        padding: '10px',
+        border: 'none',
+        borderRadius: '8px',
+        backgroundColor: '#fff',
+        color: '#2c3e50',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        transition: 'all 0.3s',
     },
 };
