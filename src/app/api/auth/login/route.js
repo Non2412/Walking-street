@@ -19,7 +19,7 @@ export async function POST(request) {
         }
 
         // ค้นหา user
-        const user = findUserByEmail(email);
+        const user = findUserByEmail(email.trim());
 
         console.log('🔍 Login attempt:', { email });
         console.log('👤 Found user:', user ? 'Yes' : 'No');

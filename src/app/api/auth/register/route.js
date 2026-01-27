@@ -32,8 +32,10 @@ export async function POST(request) {
             );
         }
 
+        const safeEmail = email.trim().toLowerCase();
+
         // ตรวจสอบว่าอีเมลซ้ำหรือไม่
-        const existingUser = findUserByEmail(email);
+        const existingUser = findUserByEmail(safeEmail);
         if (existingUser) {
             return NextResponse.json(
                 { success: false, error: 'อีเมลนี้ถูกใช้งานแล้ว' },
@@ -45,7 +47,7 @@ export async function POST(request) {
         const allUsers = getAllUsers();
         const newUser = {
             id: String(allUsers.length + 1),
-            email: email.toLowerCase(),
+            email: safeEmail,
             password,
             name,
             shopName,
