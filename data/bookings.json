@@ -199,7 +199,7 @@
     ],
     "totalPrice": 1000,
     "paymentMethod": "promptpay",
-    "status": "pending",
+    "status": "rejected",
     "targetDates": [
       "2026-02-01"
     ],
