@@ -1,10 +1,7 @@
-/**
- * Register API Route - Using Shared Database
- * POST /api/auth/register
- */
-
 import { NextResponse } from 'next/server';
 import { findUserByEmail, addUser, getAllUsers } from '@/lib/mockDb';
+import dbConnect from '@/lib/mongodb';
+import User from '@/models/User';
 
 export async function POST(request) {
     try {
@@ -33,6 +30,61 @@ export async function POST(request) {
         }
 
         const safeEmail = email.trim().toLowerCase();
+
+        // ---------------------------------------------------------
+        // USE MONGODB IF AVAILABLE
+        // ---------------------------------------------------------
+        if (process.env.MONGODB_URI) {
+            try {
+                await dbConnect();
+
+                // Check duplicate email
+                const existingUser = await User.findOne({ email: safeEmail });
+                if (existingUser) {
+                    return NextResponse.json(
+                        { success: false, error: 'อีเมลนี้ถูกใช้งานแล้ว' },
+                        { status: 409 }
+                    );
+                }
+
+                // Create new user
+                const newUser = await User.create({
+                    name,
+                    shopName,
+                    shopDescription,
+                    phone,
+                    email: safeEmail,
+                    password, // Note: In production, hash this password!
+                    role: 'user'
+                });
+
+                // Create token (Mock token for now)
+                const token = Buffer.from(`${newUser._id}:${Date.now()}`).toString('base64');
+
+                return NextResponse.json({
+                    success: true,
+                    user: {
+                        id: newUser._id,
+                        name: newUser.name,
+                        email: newUser.email,
+                        role: newUser.role
+                    },
+                    token: token,
+                    message: 'สมัครสมาชิกสำเร็จ (Database)',
+                }, { status: 201 });
+
+            } catch (dbError) {
+                console.error('Database Error:', dbError);
+                return NextResponse.json(
+                    { success: false, error: 'เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล' },
+                    { status: 500 }
+                );
+            }
+        }
+
+        // ---------------------------------------------------------
+        // FALLBACK TO FILE SYSTEM (LOCAL ONLY)
+        // ---------------------------------------------------------
 
         // ตรวจสอบว่าอีเมลซ้ำหรือไม่
         const existingUser = findUserByEmail(safeEmail);
@@ -70,7 +122,7 @@ export async function POST(request) {
             success: true,
             user: userWithoutPassword,
             token: token,
-            message: 'สมัครสมาชิกสำเร็จ',
+            message: 'สมัครสมาชิกสำเร็จ (Local)',
         }, { status: 201 });
 
     } catch (error) {
