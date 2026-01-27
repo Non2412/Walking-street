@@ -64,5 +64,16 @@
     "phone": "0945103675",
     "role": "user",
     "createdAt": "2026-01-27T15:17:15.929Z"
+  },
+  {
+    "id": "7",
+    "email": "stu6612732130@sskru.ac.th",
+    "password": "123456",
+    "name": "กก กก",
+    "shopName": "ฟฟ",
+    "shopDescription": "ขายของ",
+    "phone": "0123456789",
+    "role": "user",
+    "createdAt": "2026-01-27T15:58:10.710Z"
   }
 ]
