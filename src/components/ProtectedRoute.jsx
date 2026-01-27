@@ -14,10 +14,10 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useMarketAuth } from '@/contexts/MarketAuthContext';
 
 export default function ProtectedRoute({ children, redirectTo = '/login' }) {
-    const { user, loading } = useAuth();
+    const { user, loading } = useMarketAuth();
     const router = useRouter();
 
     useEffect(() => {

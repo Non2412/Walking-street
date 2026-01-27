@@ -4,12 +4,12 @@
 import { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Navbar from '@/components/Navbar';
-import { useAuth } from '@/contexts/AuthContext';
+import { useMarketAuth } from '@/contexts/MarketAuthContext';
 
 import styles from './page.module.css';
 
 function DashboardContent() {
-    const { user } = useAuth();
+    const { user } = useMarketAuth();
     const [filterStatus, setFilterStatus] = useState('ทั้งหมด');
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [bookings, setBookings] = useState([]);

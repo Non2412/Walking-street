@@ -11,21 +11,36 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState('');
     const [selectedBooking, setSelectedBooking] = useState(null);
+    const [hasFetched, setHasFetched] = useState(false);
 
+    // Fetch on mount AND when token changes
     useEffect(() => {
-        // รอให้ auth context โหลด token จาก localStorage
-        if (!authLoading && token) {
-            console.log('✅ Auth ready, fetching bookings...');
+        // Always try to fetch - use token from context or localStorage
+        if (!hasFetched) {
+            console.log('🔄 AdminDashboard mounted - fetching bookings');
             fetchBookings();
-        } else if (!authLoading && !token) {
-            console.warn('⚠️ No token available');
-            setLoading(false);
+            setHasFetched(true);
+        }
+    }, []);
+
+    // Also fetch if token becomes available
+    useEffect(() => {
+        if (token && !authLoading) {
+            console.log('✅ Token available from context - fetching bookings');
+            fetchBookings();
         }
     }, [token, authLoading]);
 
     const fetchBookings = async () => {
-        if (!token) {
-            console.warn('⚠️ Token not available');
+        // Use context token first, then fallback to localStorage
+        let authToken = token;
+        if (!authToken) {
+            authToken = localStorage.getItem('market_token');
+            console.log('🔑 Using token from localStorage:', !!authToken);
+        }
+        
+        if (!authToken) {
+            console.warn('⚠️ Token not available - cannot fetch bookings');
             setLoading(false);
             return;
         }
@@ -33,13 +48,14 @@ export default function AdminDashboard() {
         setLoading(true);
         try {
             console.log('🔄 Fetching bookings from local proxy');
-            console.log('📌 Token:', token.substring(0, 20) + '...');
+            console.log('📌 Token exists:', !!authToken);
+            console.log('📌 Token preview:', authToken.substring(0, 30) + '...');
             
             const response = await fetch('/api/bookings', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${authToken}`,
                 },
             });
 
@@ -52,13 +68,18 @@ export default function AdminDashboard() {
             }
 
             const data = await response.json();
-            console.log('✅ Data received:', data);
+            console.log('✅ Response data:', data);
+            console.log('📊 Bookings count:', data.data?.length || 0);
 
-            if (data.success) {
-                setBookings(data.data || []);
+            if (data.success && data.data) {
+                setBookings(data.data);
+                console.log('✅ Bookings set to state:', data.data.length);
             } else if (Array.isArray(data)) {
-                // ถ้า API return array โดยตรง
+                // If API return array directly
                 setBookings(data);
+                console.log('✅ Direct array set:', data.length);
+            } else {
+                console.warn('⚠️ Unexpected response format:', data);
             }
         } catch (error) {
             console.error('❌ Error fetching bookings:', error);

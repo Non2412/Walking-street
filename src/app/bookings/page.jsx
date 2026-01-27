@@ -88,24 +88,55 @@ function BookingsContent() {
     const [myBookings, setMyBookings] = useState([]);
     const [allBookings, setAllBookings] = useState([]); // Store all bookings to check availability
 
-    // Fetch All Bookings to check status
+    // Fetch All Bookings to check status - only when token is available
     React.useEffect(() => {
+        const token = localStorage.getItem('market_token');
+        
+        // Don't fetch if no token
+        if (!token) {
+            console.log('⏭️ No token - skipping bookings fetch');
+            return;
+        }
+
+        console.log('✅ Token found - starting bookings fetch');
+
         const fetchAllBookings = async () => {
             try {
-                const res = await fetch('/api/bookings');
+                // Double-check token before fetching
+                const currentToken = localStorage.getItem('market_token');
+                if (!currentToken) {
+                    console.log('⏭️ Token lost during fetch');
+                    return;
+                }
+                
+                const res = await fetch('/api/bookings', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                if (!res.ok) {
+                    console.log(`⚠️ Fetch failed with status ${res.status}`);
+                    return;
+                }
+                
                 const data = await res.json();
                 if (data.success) {
                     setAllBookings(data.data);
+                    console.log(`✅ Fetched ${data.data?.length || 0} bookings`);
                 }
             } catch (err) {
                 console.error("Failed to fetch bookings", err);
             }
         };
+
+        // Fetch immediately on token arrival
         fetchAllBookings();
-        // Set interval to refresh every 10 seconds (optional)
-        const interval = setInterval(fetchAllBookings, 10000);
+        
+        // Only set interval if token exists - refresh every 15 seconds
+        const interval = setInterval(fetchAllBookings, 15000);
         return () => clearInterval(interval);
-    }, []);
+    }, [user]);
 
     // Check booth status (Multi-date aware)
     const getBoothStatus = (boothId) => {
@@ -192,8 +223,16 @@ function BookingsContent() {
         const paymentId = searchParams.get('paymentId');
         if (paymentId && user) {
             // Fetch booking details
-            fetch('/api/bookings')
-                .then(res => res.json())
+            const token = localStorage.getItem('market_token');
+            fetch('/api/bookings', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return res.json();
+                })
                 .then(data => {
                     if (data.success) {
                         const booking = data.data.find(b => b.id === paymentId);
@@ -889,31 +928,48 @@ function BookingsContent() {
                                                     onClick={async () => {
                                                         // Create Booking Logic
                                                         try {
+                                                            const token = localStorage.getItem('market_token');
                                                             const res = await fetch('/api/bookings', {
                                                                 method: 'POST',
-                                                                headers: { 'Content-Type': 'application/json' },
+                                                                headers: { 
+                                                                    'Content-Type': 'application/json',
+                                                                    'Authorization': `Bearer ${token}`
+                                                                },
                                                                 body: JSON.stringify({
-                                                                    userId: user.id || 'guest', // Should be real user ID
-                                                                    name: bookingDetails.name,
+                                                                    storeName: bookingDetails.name,
+                                                                    ownerName: bookingDetails.name,
+                                                                    shopType: 'food',
                                                                     email: bookingDetails.email,
                                                                     phone: bookingDetails.phone,
+                                                                    stallNumber: selectedBooths[0]?.id || 'A-01',
+                                                                    bookingDate: selectedDates[0] || new Date().toISOString().split('T')[0],
                                                                     booths: selectedBooths.map(b => b.id),
                                                                     totalPrice: getTotalPrice(),
                                                                     paymentMethod: 'promptpay',
-                                                                    status: 'waiting_for_payment',
-                                                                    targetDates: selectedDates // Send array of dates
+                                                                    status: 'pending',
+                                                                    targetDates: selectedDates
                                                                 })
                                                             });
+
+                                                            if (!res.ok) {
+                                                                const errorText = await res.text();
+                                                                console.error('API Error:', res.status, errorText);
+                                                                alert(`เกิดข้อผิดพลาด (${res.status}): ไม่สามารถบันทึกข้อมูลการจองได้`);
+                                                                return;
+                                                            }
+
                                                             const data = await res.json();
                                                             if (data.success) {
-                                                                setCurrentBookingId(data.data.id); // Save ID for step 2
+                                                                const bookingId = data.data._id || data.data.id;
+                                                                console.log('✅ Booking created with ID:', bookingId);
+                                                                setCurrentBookingId(bookingId); // Save ID for step 2
                                                                 setBookingStep(2);
                                                             } else {
-                                                                alert('เกิดข้อผิดพลาดในการจอง: ' + data.error);
+                                                                alert('เกิดข้อผิดพลาดในการจอง: ' + (data.error || 'Unknown error'));
                                                             }
                                                         } catch (err) {
-                                                            console.error(err);
-                                                            alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+                                                            console.error('Exception:', err);
+                                                            alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: ' + err.message);
                                                         }
                                                     }}
                                                     style={{ opacity: (!bookingDetails.name || !bookingDetails.phone) ? 0.5 : 1 }}
@@ -1076,16 +1132,32 @@ function BookingsContent() {
 
                                                         // API Call to Update Status
                                                         try {
-                                                            const res = await fetch('/api/bookings', {
+                                                            const token = localStorage.getItem('market_token');
+                                                            
+                                                            if (!currentBookingId) {
+                                                                alert('ไม่พบหมายเลขการจอง กรุณาลองใหม่อีกครั้ง');
+                                                                return;
+                                                            }
+                                                            
+                                                            const res = await fetch(`/api/bookings/${currentBookingId}`, {
                                                                 method: 'PUT',
-                                                                headers: { 'Content-Type': 'application/json' },
+                                                                headers: { 
+                                                                    'Content-Type': 'application/json',
+                                                                    'Authorization': `Bearer ${token}`
+                                                                },
                                                                 body: JSON.stringify({
-                                                                    id: currentBookingId, // Use the ID from step 1
-                                                                    status: 'pending',
+                                                                    status: 'completed',
                                                                     paymentSlip: uploadPreview, // Base64 string
                                                                     price: parseFloat(paymentAmount)
                                                                 })
                                                             });
+
+                                                            if (!res.ok) {
+                                                                const errorText = await res.text();
+                                                                console.error('Payment API Error:', res.status, errorText);
+                                                                alert(`เกิดข้อผิดพลาด (${res.status}): ไม่สามารถบันทึกข้อมูลการชำระเงินได้`);
+                                                                return;
+                                                            }
 
                                                             const data = await res.json();
                                                             if (data.success) {
@@ -1100,11 +1172,11 @@ function BookingsContent() {
                                                                 setShowBookingModal(false);
                                                                 setSelectedBooths([]);
                                                             } else {
-                                                                alert('เกิดข้อผิดพลาด: ' + data.error);
+                                                                alert('เกิดข้อผิดพลาด: ' + (data.message || data.error || 'Unknown error'));
                                                             }
                                                         } catch (err) {
                                                             console.error('Submission Error:', err);
-                                                            alert('ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+                                                            alert('ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง: ' + err.message);
                                                         }
                                                     }}
                                                 >

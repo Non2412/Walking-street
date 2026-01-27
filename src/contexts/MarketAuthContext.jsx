@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 
 const MarketAuthContext = createContext();
 
-// ใช้ Vercel API แทน Local API
-const API_BASE_URL = 'https://market-api-mu.vercel.app/api';
+// ใช้ Local API จาก environment variable
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
 
 export function MarketAuthProvider({ children }) {
     const [user, setUser] = useState(null);
@@ -35,7 +35,7 @@ export function MarketAuthProvider({ children }) {
     // User Signup (ใช้ Local API ชั่วคราว)
     const signup = async (username, email, password, fullName) => {
         try {
-            const response = await fetch(`/api/auth/signup`, {
+            const response = await fetch(`${API_BASE_URL}/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password, fullName }),
@@ -60,7 +60,7 @@ export function MarketAuthProvider({ children }) {
         }
     };
 
-    // User Login (ใช้ Local API ชั่วคราว)
+    // User Login (ใช้ Local proxy route)
     const login = async (email, password) => {
         try {
             const response = await fetch(`/api/auth/user-login`, {
@@ -75,7 +75,7 @@ export function MarketAuthProvider({ children }) {
                 throw new Error(data.error || 'Login failed');
             }
 
-            const { token: newToken, user: newUser } = data.data;
+            const { token: newToken, user: newUser } = data;
             setToken(newToken);
             setUser(newUser);
             localStorage.setItem('market_token', newToken);
@@ -88,10 +88,10 @@ export function MarketAuthProvider({ children }) {
         }
     };
 
-    // Admin Login
+    // Admin Login (ใช้ Local proxy route)
     const adminLogin = async (email, password) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            const response = await fetch(`/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -130,6 +130,7 @@ export function MarketAuthProvider({ children }) {
             user,
             token,
             loading,
+            authLoading: loading,
             signup,
             login,
             adminLogin,

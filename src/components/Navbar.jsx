@@ -28,7 +28,25 @@ export default function Navbar() {
 
         const fetchNotifications = async () => {
             try {
-                const res = await fetch('/api/bookings');
+                const token = localStorage.getItem('market_token');
+                
+                // Skip if no token
+                if (!token) {
+                    console.log('⏭️ No token - skipping notifications fetch');
+                    return;
+                }
+                
+                const res = await fetch('/api/bookings', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!res.ok) {
+                    console.log(`⚠️ Failed to fetch notifications: ${res.status}`);
+                    return;
+                }
+                
                 const data = await res.json();
 
                 if (data.success) {
@@ -462,23 +480,5 @@ const styles = {
     },
 };
 
-// Media queries
-if (typeof window !== 'undefined') {
-    const mediaQuery = window.matchMedia('(max-width: 768px)');
-
-    const updateStyles = () => {
-        if (mediaQuery.matches) {
-            styles.menuDesktop.display = 'none';
-            styles.userSection.display = 'none';
-            styles.mobileMenuButton.display = 'block';
-            styles.mobileMenu.display = 'flex';
-        } else {
-            styles.menuDesktop.display = 'flex';
-            styles.userSection.display = 'flex';
-            styles.mobileMenuButton.display = 'none';
-        }
-    };
-
-    mediaQuery.addListener(updateStyles);
-    updateStyles();
-}
+// Media queries - Responsive styles handled via CSS modules
+// Inline style mutation removed as it causes read-only errors

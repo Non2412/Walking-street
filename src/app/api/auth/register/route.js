@@ -7,6 +7,17 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle OPTIONS request
+export async function OPTIONS() {
+    return new NextResponse(null, { headers: corsHeaders });
+}
+
 export async function POST(request) {
     try {
         await dbConnect();
@@ -19,21 +30,21 @@ export async function POST(request) {
         if (!email || !password) {
             return NextResponse.json(
                 { success: false, error: 'กรุณากรอกอีเมลและรหัสผ่าน' },
-                { status: 400 }
+                { status: 400, headers: corsHeaders }
             );
         }
 
         if (password !== confirmPassword) {
             return NextResponse.json(
                 { success: false, error: 'รหัสผ่านไม่ตรงกัน' },
-                { status: 400 }
+                { status: 400, headers: corsHeaders }
             );
         }
 
         if (password.length < 6) {
             return NextResponse.json(
                 { success: false, error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' },
-                { status: 400 }
+                { status: 400, headers: corsHeaders }
             );
         }
 
@@ -42,7 +53,7 @@ export async function POST(request) {
         if (existingUser) {
             return NextResponse.json(
                 { success: false, error: 'อีเมลนี้ถูกใช้งานแล้ว' },
-                { status: 409 }
+                { status: 409, headers: corsHeaders }
             );
         }
 
@@ -66,13 +77,13 @@ export async function POST(request) {
             success: true,
             user: userResponse,
             message: 'สมัครสมาชิกสำเร็จ',
-        }, { status: 201 });
+        }, { status: 201, headers: corsHeaders });
 
     } catch (error) {
         console.error('Register error:', error);
         return NextResponse.json(
             { success: false, error: 'เกิดข้อผิดพลาดในระบบ' },
-            { status: 500 }
+            { status: 500, headers: corsHeaders }
         );
     }
 }

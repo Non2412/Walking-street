@@ -6,6 +6,17 @@
 
 import { NextResponse } from 'next/server';
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle OPTIONS request
+export async function OPTIONS() {
+    return new NextResponse(null, { headers: corsHeaders });
+}
+
 export async function POST(request) {
     try {
         const { email, password } = await request.json();
@@ -14,7 +25,7 @@ export async function POST(request) {
         if (!email || !password) {
             return NextResponse.json(
                 { success: false, error: 'กรุณากรอกอีเมลและรหัสผ่าน' },
-                { status: 400 }
+                { status: 400, headers: corsHeaders }
             );
         }
 
@@ -33,7 +44,7 @@ export async function POST(request) {
             console.error('❌ Market API error:', data);
             return NextResponse.json(
                 { success: false, error: data.error || 'เข้าสู่ระบบไม่สำเร็จ' },
-                { status: response.status }
+                { status: response.status, headers: corsHeaders }
             );
         }
 
@@ -42,13 +53,13 @@ export async function POST(request) {
         return NextResponse.json({
             success: true,
             data: data.data,
-        });
+        }, { headers: corsHeaders });
 
     } catch (error) {
         console.error('❌ Admin login error:', error);
         return NextResponse.json(
             { success: false, error: 'เกิดข้อผิดพลาดในระบบ' },
-            { status: 500 }
+            { status: 500, headers: corsHeaders }
         );
     }
 }

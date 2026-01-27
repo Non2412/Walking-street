@@ -1,0 +1,9 @@
+[
+  {
+    "bookingId": "69764966d9dbaa0a007ad409",
+    "status": "completed",
+    "price": 1000,
+    "paymentSlip": "saved",
+    "timestamp": "2026-01-25T16:48:50.234Z"
+  }
+]

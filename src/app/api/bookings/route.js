@@ -63,6 +63,9 @@ export async function POST(request) {
         const authHeader = request.headers.get('authorization');
         const body = await request.json();
 
+        console.log('📝 POST /api/bookings - Request body:', JSON.stringify(body));
+        console.log('🔑 Auth header:', authHeader ? 'Present' : 'Missing');
+
         if (!authHeader) {
             return NextResponse.json(
                 { success: false, message: 'No authorization token provided' },
@@ -80,7 +83,11 @@ export async function POST(request) {
             body: JSON.stringify(body),
         });
 
+        console.log('📊 Market API response status:', response.status);
+
         if (!response.ok) {
+            const errorData = await response.text();
+            console.error(`❌ Market API Error: ${response.status}`, errorData);
             throw new Error(`Market API Error: ${response.status}`);
         }
 

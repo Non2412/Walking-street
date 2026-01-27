@@ -7,6 +7,17 @@ import { NextResponse } from 'next/server';
 import { sendPasswordResetEmail } from '@/lib/emailService';
 import crypto from 'crypto';
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle OPTIONS request
+export async function OPTIONS() {
+    return new NextResponse(null, { headers: corsHeaders });
+}
+
 // TODO: ในระบบจริงควรเก็บ reset tokens ใน database
 // ตอนนี้เก็บใน memory (จะหายเมื่อ restart server)
 const resetTokens = new Map();
@@ -19,7 +30,7 @@ export async function POST(request) {
         if (!email) {
             return NextResponse.json(
                 { success: false, error: 'กรุณากรอกอีเมล' },
-                { status: 400 }
+                { status: 400, headers: corsHeaders }
             );
         }
 
@@ -47,20 +58,20 @@ export async function POST(request) {
         if (!emailResult.success) {
             return NextResponse.json(
                 { success: false, error: 'ไม่สามารถส่งอีเมลได้ กรุณาลองใหม่อีกครั้ง' },
-                { status: 500 }
+                { status: 500, headers: corsHeaders }
             );
         }
 
         return NextResponse.json({
             success: true,
             message: 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว',
-        });
+        }, { headers: corsHeaders });
 
     } catch (error) {
         console.error('Reset password error:', error);
         return NextResponse.json(
             { success: false, error: 'เกิดข้อผิดพลาดในระบบ' },
-            { status: 500 }
+            { status: 500, headers: corsHeaders }
         );
     }
 }
@@ -74,7 +85,7 @@ export async function GET(request) {
         if (!token) {
             return NextResponse.json(
                 { success: false, error: 'ไม่พบ token' },
-                { status: 400 }
+                { status: 400, headers: corsHeaders }
             );
         }
 
@@ -83,7 +94,7 @@ export async function GET(request) {
         if (!tokenData) {
             return NextResponse.json(
                 { success: false, error: 'Token ไม่ถูกต้อง' },
-                { status: 400 }
+                { status: 400, headers: corsHeaders }
             );
         }
 
@@ -91,20 +102,20 @@ export async function GET(request) {
             resetTokens.delete(token);
             return NextResponse.json(
                 { success: false, error: 'Token หมดอายุแล้ว' },
-                { status: 400 }
+                { status: 400, headers: corsHeaders }
             );
         }
 
         return NextResponse.json({
             success: true,
             email: tokenData.email,
-        });
+        }, { headers: corsHeaders });
 
     } catch (error) {
         console.error('Verify token error:', error);
         return NextResponse.json(
             { success: false, error: 'เกิดข้อผิดพลาดในระบบ' },
-            { status: 500 }
+            { status: 500, headers: corsHeaders }
         );
     }
 }

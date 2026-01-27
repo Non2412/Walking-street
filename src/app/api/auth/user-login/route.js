@@ -8,6 +8,17 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import jwt from 'jsonwebtoken';
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle OPTIONS request
+export async function OPTIONS() {
+    return new NextResponse(null, { headers: corsHeaders });
+}
+
 export async function POST(request) {
     try {
         await dbConnect();
@@ -18,7 +29,7 @@ export async function POST(request) {
         if (!email || !password) {
             return NextResponse.json(
                 { success: false, error: 'กรุณากรอกอีเมลและรหัสผ่าน' },
-                { status: 400 }
+                { status: 400, headers: corsHeaders }
             );
         }
 
@@ -31,7 +42,7 @@ export async function POST(request) {
             console.error('❌ User not found:', email);
             return NextResponse.json(
                 { success: false, error: 'ไม่พบบัญชีผู้ใช้นี้' },
-                { status: 401 }
+                { status: 401, headers: corsHeaders }
             );
         }
 
@@ -42,7 +53,7 @@ export async function POST(request) {
             console.error('❌ Invalid password for:', email);
             return NextResponse.json(
                 { success: false, error: 'รหัสผ่านไม่ถูกต้อง' },
-                { status: 401 }
+                { status: 401, headers: corsHeaders }
             );
         }
 
@@ -61,13 +72,13 @@ export async function POST(request) {
             success: true,
             user: userResponse,
             token: token,
-        });
+        }, { headers: corsHeaders });
 
     } catch (error) {
         console.error('❌ User login error:', error);
         return NextResponse.json(
             { success: false, error: 'เกิดข้อผิดพลาดในระบบ' },
-            { status: 500 }
+            { status: 500, headers: corsHeaders }
         );
     }
 }
