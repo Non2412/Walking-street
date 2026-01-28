@@ -1,7 +1,4 @@
 import { NextResponse } from 'next/server';
-import { findUserByEmail, DEFAULT_USERS } from '@/lib/mockDb';
-import dbConnect from '@/lib/mongodb';
-import User from '@/models/User';
 
 export async function POST(request) {
     try {
@@ -15,125 +12,37 @@ export async function POST(request) {
             );
         }
 
-        const safeEmail = email.trim();
+        // External API Configuration
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://market-api-n9paign16-suppchai0-projects.vercel.app/api';
 
-        console.log('🔍 Login attempt:', { email: safeEmail });
+        console.log('🚀 Proxying Login to External API:', `${API_BASE_URL}/auth/user-login`);
 
-        // ---------------------------------------------------------
-        // USE MONGODB IF AVAILABLE
-        // ---------------------------------------------------------
-        if (process.env.MONGODB_URI) {
-            try {
-                await dbConnect();
-
-                // Find user
-                const user = await User.findOne({ email: safeEmail.toLowerCase() });
-
-                // Check Admin fallback if MONGODB is empty but we need admin access
-                if (!user && safeEmail === 'admin@example.com' && password === '123456') {
-                    return NextResponse.json({
-                        success: true,
-                        data: {
-                            user: {
-                                id: 'admin-fallback',
-                                email: 'admin@example.com',
-                                name: 'Admin Fallback',
-                                role: 'admin'
-                            },
-                            token: 'admin-token-fallback',
-                        },
-                        message: 'เข้าสู่ระบบสำเร็จ (Admin Fallback)',
-                    });
-                }
-
-                if (!user) {
-                    return NextResponse.json(
-                        { success: false, error: 'ไม่พบผู้ใช้งานนี้' },
-                        { status: 404 }
-                    );
-                }
-
-                // Verify password (Simple string comparison for now as per registration)
-                // In production, use bcrypt.compare(password, user.password)
-                if (user.password !== password) {
-                    return NextResponse.json(
-                        { success: false, error: 'รหัสผ่านไม่ถูกต้อง' },
-                        { status: 401 }
-                    );
-                }
-
-                console.log('✅ Login successful (DB):', user.email);
-
-                const token = Buffer.from(`${user._id}:${Date.now()}`).toString('base64');
-
-                return NextResponse.json({
-                    success: true,
-                    data: {
-                        user: {
-                            id: user._id,
-                            name: user.name,
-                            email: user.email,
-                            role: user.role,
-                            shopName: user.shopName
-                        },
-                        token: token,
-                    },
-                    message: 'เข้าสู่ระบบสำเร็จ',
-                });
-
-            } catch (dbError) {
-                console.error('Database Login Error:', dbError);
-                return NextResponse.json(
-                    { success: false, error: 'เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล' },
-                    { status: 500 }
-                );
-            }
-        }
-
-        // ---------------------------------------------------------
-        // FALLBACK TO FILE SYSTEM (LOCAL ONLY)
-        // ---------------------------------------------------------
-
-        // ค้นหา user
-        const user = findUserByEmail(safeEmail);
-
-        console.log('👤 Found user:', user ? 'Yes' : 'No');
-
-        if (!user) {
-            return NextResponse.json(
-                { success: false, error: 'ไม่พบผู้ใช้งานนี้' },
-                { status: 404 }
-            );
-        }
-
-        // ตรวจสอบรหัสผ่าน
-        if (user.password !== password) {
-            return NextResponse.json(
-                { success: false, error: 'รหัสผ่านไม่ถูกต้อง' },
-                { status: 401 }
-            );
-        }
-
-        // สร้าง token
-        const token = Buffer.from(`${user.id}:${Date.now()}`).toString('base64');
-
-        // ส่งข้อมูล user กลับ (ไม่ส่ง password)
-        // eslint-disable-next-line no-unused-vars
-        const { password: userPassword, ...userWithoutPassword } = user;
-
-        return NextResponse.json({
-            success: true,
-            data: {
-                user: userWithoutPassword,
-                token: token,
+        // Check if Admin Login (Optional: if the external API has a separate admin login)
+        // For now, assuming standard user login via proxy
+        const response = await fetch(`${API_BASE_URL}/auth/user-login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
             },
-            message: 'เข้าสู่ระบบสำเร็จ (Local)',
+            body: JSON.stringify({ email, password }),
         });
 
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('❌ External API Login Error:', data);
+            return NextResponse.json(
+                { success: false, error: data.error || 'Login failed from External API' },
+                { status: response.status }
+            );
+        }
+
+        return NextResponse.json(data, { status: 200 });
+
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Login Proxy error:', error);
         return NextResponse.json(
-            { success: false, error: 'เกิดข้อผิดพลาดในระบบ' },
+            { success: false, error: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์ภายนอก' },
             { status: 500 }
         );
     }

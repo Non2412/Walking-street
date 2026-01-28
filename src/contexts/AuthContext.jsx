@@ -7,7 +7,7 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { userLogin, userSignup } from '@/services/api';
+// import { userLogin, userSignup } from '@/services/api';
 // import Script from 'next/script'; // Import Script for CDN loading
 
 const AuthContext = createContext();
@@ -51,16 +51,32 @@ export function AuthProvider({ children }) {
         loadUser();
     }, []);
 
-    // Login - ใช้ External API (Market API)
+    // Login - ผ่าน Proxy API (แก้ปัญหา CORS)
     const login = async (email, password) => {
         try {
-            console.log('🔐 Attempting login with External API...');
+            console.log('🔐 Attempting login via Proxy...');
 
-            // เรียกใช้ service จาก api.ts
-            // userLogin คืนค่าเป็น { token, user } หรือ throw error
-            const { user, token } = await userLogin(email, password);
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
 
-            console.log('✅ Login successful', user);
+            const resData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(resData.error || 'Login failed');
+            }
+
+            console.log('✅ Login successful', resData);
+
+            // API sends { success: true, data: { user: ..., token: ... } }
+            // Support both structures
+            const { user, token } = resData.data || resData;
+
+            if (!user || !token) {
+                throw new Error('Invalid response from server');
+            }
 
             // บันทึก user และ token
             setUser(user);
@@ -74,25 +90,26 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Register - ใช้ External API (Market API)
+    // Register - ผ่าน Proxy API (แก้ปัญหา CORS)
     const register = async (userData) => {
         try {
-            console.log('📝 Attempting registration with External API...');
+            console.log('📝 Attempting registration via Proxy...');
 
-            // Map userData to match external API requirements
-            // userSignup(username, email, password, fullName)
-            // Note: external API might need specific fields. 
-            // Based on api.ts: username, email, password, fullName
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData),
+            });
 
-            const username = userData.email.split('@')[0]; // Auto-generate username from email
-            const { user, token } = await userSignup(
-                username,
-                userData.email,
-                userData.password,
-                userData.name
-            );
+            const resData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(resData.error || 'Registration failed');
+            }
 
             console.log('✅ Registration successful');
+
+            const { user, token } = resData.data || resData;
 
             // บันทึก user และ token
             setUser(user);
@@ -102,6 +119,7 @@ export function AuthProvider({ children }) {
             return { success: true, user: user };
         } catch (error) {
             console.error('❌ Registration failed:', error.message);
+            // Must return error for UI to show
             return { success: false, error: error.message };
         }
     };
