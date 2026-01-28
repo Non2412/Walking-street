@@ -17,8 +17,6 @@ export async function POST(request) {
 
         console.log('🚀 Proxying Login to External API:', `${API_BASE_URL}/auth/user-login`);
 
-        // Check if Admin Login (Optional: if the external API has a separate admin login)
-        // For now, assuming standard user login via proxy
         const response = await fetch(`${API_BASE_URL}/auth/user-login`, {
             method: 'POST',
             headers: {
@@ -27,7 +25,21 @@ export async function POST(request) {
             body: JSON.stringify({ email, password }),
         });
 
-        const data = await response.json();
+        const responseText = await response.text();
+        let data;
+
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('❌ External API Non-JSON Response:', responseText);
+            const titleMatch = responseText.match(/<title>(.*?)<\/title>/i);
+            const errorMessage = titleMatch ? titleMatch[1] : responseText.substring(0, 100);
+
+            return NextResponse.json(
+                { success: false, error: `External API Error: ${errorMessage}` },
+                { status: response.status === 200 ? 502 : response.status }
+            );
+        }
 
         if (!response.ok) {
             console.error('❌ External API Login Error:', data);

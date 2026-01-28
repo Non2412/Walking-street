@@ -43,7 +43,22 @@ export async function POST(request) {
             body: JSON.stringify(payload),
         });
 
-        const data = await response.json();
+        const responseText = await response.text();
+        let data;
+
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('❌ External API Non-JSON Response:', responseText);
+            // Try to extract title if it's an HTML error page from Vercel/etc
+            const titleMatch = responseText.match(/<title>(.*?)<\/title>/i);
+            const errorMessage = titleMatch ? titleMatch[1] : responseText.substring(0, 100);
+
+            return NextResponse.json(
+                { success: false, error: `External API Error: ${errorMessage}` },
+                { status: response.status === 200 ? 502 : response.status }
+            );
+        }
 
         if (!response.ok) {
             console.error('❌ External API Error:', data);
