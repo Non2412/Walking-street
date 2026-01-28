@@ -51,10 +51,10 @@ export function AuthProvider({ children }) {
         loadUser();
     }, []);
 
-    // Login - ผ่าน Proxy API (แก้ปัญหา CORS)
+    // Login
     const login = async (email, password) => {
         try {
-            console.log('🔐 Attempting login via Proxy...');
+            console.log('🔐 Attempting login...');
 
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
@@ -71,7 +71,6 @@ export function AuthProvider({ children }) {
             console.log('✅ Login successful', resData);
 
             // API sends { success: true, data: { user: ..., token: ... } }
-            // Support both structures
             const { user, token } = resData.data || resData;
 
             if (!user || !token) {
@@ -90,10 +89,10 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Register - ผ่าน Proxy API (แก้ปัญหา CORS)
+    // Register
     const register = async (userData) => {
         try {
-            console.log('📝 Attempting registration via Proxy...');
+            console.log('📝 Attempting registration...');
 
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
