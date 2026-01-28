@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { findUserByEmail, addUser, getAllUsers } from '@/lib/mockDb';
+import dbConnect from '@/lib/mongodb';
+import User from '@/models/User';
 
 export async function POST(request) {
     try {
@@ -19,61 +22,113 @@ export async function POST(request) {
             );
         }
 
-        // External API Configuration
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://market-api-n9paign16-suppchai0-projects.vercel.app/api';
+        if (password.length < 6) {
+            return NextResponse.json(
+                { success: false, error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' },
+                { status: 400 }
+            );
+        }
 
-        // Prepare Payload for External API
         const safeEmail = email.trim().toLowerCase();
-        const username = safeEmail.split('@')[0];
 
-        const payload = {
-            username: username,
+        // ---------------------------------------------------------
+        // USE MONGODB IF AVAILABLE
+        // ---------------------------------------------------------
+        if (process.env.MONGODB_URI) {
+            try {
+                await dbConnect();
+
+                // Check duplicate email
+                const existingUser = await User.findOne({ email: safeEmail });
+                if (existingUser) {
+                    return NextResponse.json(
+                        { success: false, error: 'อีเมลนี้ถูกใช้งานแล้ว' },
+                        { status: 409 }
+                    );
+                }
+
+                // Create new user
+                const newUser = await User.create({
+                    name,
+                    shopName,
+                    shopDescription,
+                    phone,
+                    email: safeEmail,
+                    password, // Note: In production, hash this password!
+                    role: 'user'
+                });
+
+                // Create token (Mock token for now)
+                const token = Buffer.from(`${newUser._id}:${Date.now()}`).toString('base64');
+
+                return NextResponse.json({
+                    success: true,
+                    user: {
+                        id: newUser._id,
+                        name: newUser.name,
+                        email: newUser.email,
+                        role: newUser.role
+                    },
+                    token: token,
+                    message: 'สมัครสมาชิกสำเร็จ (Database)',
+                }, { status: 201 });
+
+            } catch (dbError) {
+                console.error('Database Error:', dbError);
+                return NextResponse.json(
+                    { success: false, error: 'เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล' },
+                    { status: 500 }
+                );
+            }
+        }
+
+        // ---------------------------------------------------------
+        // FALLBACK TO FILE SYSTEM (LOCAL ONLY)
+        // ---------------------------------------------------------
+
+        // ตรวจสอบว่าอีเมลซ้ำหรือไม่
+        const existingUser = findUserByEmail(safeEmail);
+        if (existingUser) {
+            return NextResponse.json(
+                { success: false, error: 'อีเมลนี้ถูกใช้งานแล้ว' },
+                { status: 409 }
+            );
+        }
+
+        // สร้าง user ใหม่
+        const allUsers = getAllUsers();
+        const newUser = {
+            id: String(allUsers.length + 1),
             email: safeEmail,
-            password: password,
-            fullName: name
+            password,
+            name,
+            shopName,
+            shopDescription,
+            phone,
+            role: 'user',
+            createdAt: new Date().toISOString(),
         };
 
-        console.log('🚀 Proxying Register to External API:', `${API_BASE_URL}/auth/signup`);
+        addUser(newUser);
 
-        const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-        });
+        // สร้าง token
+        const token = Buffer.from(`${newUser.id}:${Date.now()}`).toString('base64');
 
-        const responseText = await response.text();
-        let data;
+        // ส่งข้อมูล user กลับ (ไม่ส่ง password)
+        // eslint-disable-next-line no-unused-vars
+        const { password: userPassword, ...userWithoutPassword } = newUser;
 
-        try {
-            data = JSON.parse(responseText);
-        } catch (e) {
-            console.error('❌ External API Non-JSON Response:', responseText);
-            // Try to extract title if it's an HTML error page from Vercel/etc
-            const titleMatch = responseText.match(/<title>(.*?)<\/title>/i);
-            const errorMessage = titleMatch ? titleMatch[1] : responseText.substring(0, 100);
-
-            return NextResponse.json(
-                { success: false, error: `External API Error: ${errorMessage}` },
-                { status: response.status === 200 ? 502 : response.status }
-            );
-        }
-
-        if (!response.ok) {
-            console.error('❌ External API Error:', data);
-            return NextResponse.json(
-                { success: false, error: data.error || 'Registration failed from External API' },
-                { status: response.status }
-            );
-        }
-
-        return NextResponse.json(data, { status: 200 });
+        return NextResponse.json({
+            success: true,
+            user: userWithoutPassword,
+            token: token,
+            message: 'สมัครสมาชิกสำเร็จ (Local)',
+        }, { status: 201 });
 
     } catch (error) {
-        console.error('Register Proxy error:', error);
+        console.error('Register error:', error);
         return NextResponse.json(
-            { success: false, error: `Connection Error: ${error.message}` },
+            { success: false, error: 'เกิดข้อผิดพลาดในระบบ' },
             { status: 500 }
         );
     }
