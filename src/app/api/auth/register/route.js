@@ -58,7 +58,7 @@ export async function POST(request) {
     } catch (error) {
         console.error('Register Proxy error:', error);
         return NextResponse.json(
-            { success: false, error: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์ภายนอก' },
+            { success: false, error: `Connection Error: ${error.message}` },
             { status: 500 }
         );
     }
