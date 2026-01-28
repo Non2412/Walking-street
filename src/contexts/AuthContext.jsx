@@ -7,7 +7,8 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Script from 'next/script'; // Import Script for CDN loading
+import { userLogin, userSignup } from '@/services/api';
+// import Script from 'next/script'; // Import Script for CDN loading
 
 const AuthContext = createContext();
 
@@ -50,32 +51,16 @@ export function AuthProvider({ children }) {
         loadUser();
     }, []);
 
-    // Login - ใช้ local API
+    // Login - ใช้ External API (Market API)
     const login = async (email, password) => {
         try {
-            console.log('🔐 Attempting login...');
+            console.log('🔐 Attempting login with External API...');
 
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            });
+            // เรียกใช้ service จาก api.ts
+            // userLogin คืนค่าเป็น { token, user } หรือ throw error
+            const { user, token } = await userLogin(email, password);
 
-            const resData = await response.json();
-
-            if (!response.ok) {
-                throw new Error(resData.error || 'Login failed');
-            }
-
-            console.log('✅ Login successful', resData);
-
-            // API sends { success: true, data: { user: ..., token: ... } }
-            // Must access .data property correctly
-            const { user, token } = resData.data || resData; // Support both structures just in case
-
-            if (!user || !token) {
-                throw new Error('Invalid response from server');
-            }
+            console.log('✅ Login successful', user);
 
             // บันทึก user และ token
             setUser(user);
@@ -89,28 +74,25 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Register - ใช้ local API
+    // Register - ใช้ External API (Market API)
     const register = async (userData) => {
         try {
-            console.log('📝 Attempting registration...');
+            console.log('📝 Attempting registration with External API...');
 
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(userData),
-            });
+            // Map userData to match external API requirements
+            // userSignup(username, email, password, fullName)
+            // Note: external API might need specific fields. 
+            // Based on api.ts: username, email, password, fullName
 
-            const resData = await response.json();
-
-            if (!response.ok) {
-                throw new Error(resData.error || 'Registration failed');
-            }
+            const username = userData.email.split('@')[0]; // Auto-generate username from email
+            const { user, token } = await userSignup(
+                username,
+                userData.email,
+                userData.password,
+                userData.name
+            );
 
             console.log('✅ Registration successful');
-
-            // API sends { success: true, data: { user: ..., token: ... } }
-            // Support both structures
-            const { user, token } = resData.data || resData;
 
             // บันทึก user และ token
             setUser(user);
