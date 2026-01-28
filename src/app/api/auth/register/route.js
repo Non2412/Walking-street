@@ -76,7 +76,7 @@ export async function POST(request) {
             } catch (dbError) {
                 console.error('Database Error:', dbError);
                 return NextResponse.json(
-                    { success: false, error: 'เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล' },
+                    { success: false, error: `Database Connection Failed: ${dbError.message}` },
                     { status: 500 }
                 );
             }
