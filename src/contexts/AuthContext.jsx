@@ -7,7 +7,8 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Script from 'next/script'; // Import Script for CDN loading
+// import { userLogin, userSignup } from '@/services/api';
+// import Script from 'next/script'; // Import Script for CDN loading
 
 const AuthContext = createContext();
 
@@ -50,7 +51,7 @@ export function AuthProvider({ children }) {
         loadUser();
     }, []);
 
-    // Login - ใช้ local API
+    // Login
     const login = async (email, password) => {
         try {
             console.log('🔐 Attempting login...');
@@ -70,8 +71,7 @@ export function AuthProvider({ children }) {
             console.log('✅ Login successful', resData);
 
             // API sends { success: true, data: { user: ..., token: ... } }
-            // Must access .data property correctly
-            const { user, token } = resData.data || resData; // Support both structures just in case
+            const { user, token } = resData.data || resData;
 
             if (!user || !token) {
                 throw new Error('Invalid response from server');
@@ -89,7 +89,7 @@ export function AuthProvider({ children }) {
         }
     };
 
-    // Register - ใช้ local API
+    // Register
     const register = async (userData) => {
         try {
             console.log('📝 Attempting registration...');
@@ -108,8 +108,6 @@ export function AuthProvider({ children }) {
 
             console.log('✅ Registration successful');
 
-            // API sends { success: true, data: { user: ..., token: ... } }
-            // Support both structures
             const { user, token } = resData.data || resData;
 
             // บันทึก user และ token
@@ -120,6 +118,7 @@ export function AuthProvider({ children }) {
             return { success: true, user: user };
         } catch (error) {
             console.error('❌ Registration failed:', error.message);
+            // Must return error for UI to show
             return { success: false, error: error.message };
         }
     };

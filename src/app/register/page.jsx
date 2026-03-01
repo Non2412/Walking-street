@@ -99,10 +99,10 @@ export default function RegisterPage() {
                 // Redirect to login page after successful registration
                 router.push('/login');
             } else {
-                setErrors({ submit: result.error || 'การสมัครสมาชิกล้มเหลว' });
+                setErrors({ general: result.error || 'การสมัครสมาชิกล้มเหลว' });
             }
         } catch (error) {
-            setErrors({ submit: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
+            setErrors({ general: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' });
         } finally {
             setIsLoading(false);
         }
